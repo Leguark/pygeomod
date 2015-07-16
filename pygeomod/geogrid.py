@@ -5,6 +5,10 @@ Created on 21/03/2014
 @author: Florian Wellmann (some parts originally developed by Erik Schaeffer)
 '''
 import numpy as np
+
+import os.path
+import platform
+
 try:
     import matplotlib.pyplot as plt
 except ImportError:
@@ -25,23 +29,23 @@ import geomodeller_xml_obj as GO
 
 class GeoGrid():
     """Object definition for exported geomodel grids"""
-    
+
     def __init__(self, **kwds):
         """GeoGrid contains methods to load, analyse, and process exported geomodel grids
-        
+
         **Optional Keywords**:
             - *grid_filename* = string : filename of exported grid
             - *delxyz_filename* = string : file with model discretisation
             - *dimensions_filename* = string : file with model dimension (coordinates)
         """
-        
+
         if kwds.has_key('grid_filename'):
             self.grid_filename = kwds['grid_filename']
         if kwds.has_key('delxyz_filename'):
             self.delxyz_filename = kwds['delxyz_filename']
         if kwds.has_key('dimensions_filename'):
             self.dimensions_filename = kwds['dimensions_filename']
-            
+
     def __add__(self, G_other):
         """Combine grid with another GeoGrid if regions are overlapping"""
         # check overlap
@@ -50,21 +54,21 @@ class GeoGrid():
         if (G_other.ymin < self.ymax and G_other.ymin > self.ymin):
             print("Grids overlapping in y-direction between %.0f and %.0f" %
                   (G_other.ymin, self.ymax))
-    
+
     def load_grid(self):
         """Load exported grid, discretisation and dimensions from file"""
         if not hasattr(self, 'grid_filename'):
             raise AttributeError("Grid filename is not defined!")
-        self.grid = np.loadtxt(self.grid_filename, 
-                               delimiter = ',', 
+        self.grid = np.loadtxt(self.grid_filename,
+                               delimiter = ',',
                                dtype='int',
                                unpack=False)
         if hasattr(self, 'delxyz_filename'):
             self.load_delxyz(self.delxyz_filename)
             self.adjust_gridshape()
         if hasattr(self, 'dimensions_filename'):
-            self.load_dimensions(self.dimensions_filename)    
-    
+            self.load_dimensions(self.dimensions_filename)
+
     def load_delxyz(self, delxyz_filename):
         """Load grid discretisation from file"""
         del_lines = open(delxyz_filename, 'r').readlines()
@@ -76,31 +80,31 @@ class GeoGrid():
         self.delz = np.array([float(d) for d in d2])
         (self.nx, self.ny, self.nz) = (len(self.delx), len(self.dely), len(self.delz))
         (self.extent_x, self.extent_y, self.extent_z) = (sum(self.delx), sum(self.dely), sum(self.delz))
-        
+
     def set_delxyz(self, delxyz):
         """Set delx, dely, delz arrays explicitly and update additional attributes
-        
+
         **Arguments**:
             - *delxyz* = (delx-array, dely-array, delz-array): arrays with cell dimensions
         """
         self.delx, self.dely, self.delz = delxyz
         (self.nx, self.ny, self.nz) = (len(self.delx), len(self.dely), len(self.delz))
-        (self.extent_x, self.extent_y, self.extent_z) = (sum(self.delx), sum(self.dely), sum(self.delz))        
-        
+        (self.extent_x, self.extent_y, self.extent_z) = (sum(self.delx), sum(self.dely), sum(self.delz))
+
     def set_basename(self, name):
         """Set basename for grid exports, etc.
-        
+
         **Arguments**:
             - *name* = string: basename
         """
         self.basename = name
-        
+
     def load_dimensions(self, dimensions_filename):
         """Load project dimensions from file"""
         dim = [float(d) for d in open(dimensions_filename, 'r').readlines()[1].split(",")]
         (self.xmin, self.xmax, self.ymin, self.ymax, self.zmin, self.zmax) = dim
         # calculate cell centre positions in real world coordinates
-        
+
     def define_regular_grid(self, nx, ny, nz):
         """Define a regular grid from defined project boundaries and given discretisations"""
         self.nx = nx
@@ -112,7 +116,7 @@ class GeoGrid():
         # create (empty) grid object
         self.grid = np.ndarray((nx, ny, nz))
         # update model extent
-        (self.extent_x, self.extent_y, self.extent_z) = (sum(self.delx), sum(self.dely), sum(self.delz))        
+        (self.extent_x, self.extent_y, self.extent_z) = (sum(self.delx), sum(self.dely), sum(self.delz))
 
 
     def define_irregular_grid(self, delx, dely, delz):
@@ -126,11 +130,11 @@ class GeoGrid():
         # create (empty) grid object
         self.grid = np.ndarray((self.nx, self.ny, self.nz))
         # update model extent
-        (self.extent_x, self.extent_y, self.extent_z) = (sum(self.delx), sum(self.dely), sum(self.delz))        
-        
+        (self.extent_x, self.extent_y, self.extent_z) = (sum(self.delx), sum(self.dely), sum(self.delz))
+
     def get_dimensions_from_geomodeller_xml_project(self, xml_filename):
         """Get grid dimensions from Geomodeller project
-        
+
         **Arguments**:
             - *xml_filename* = string: filename of Geomodeller XML file
         """
@@ -140,18 +144,23 @@ class GeoGrid():
         # require an additional module being loaded, so avoid here!
         filename_ctypes = ctypes.c_char_p(xml_filename)
         # get model boundaries
-        lib = ctypes.CDLL('./libgeomod.so') #linux
-        #lib = ctypes.windll.libgeomod #windows
+            #Detection of operative system:
+        if platform.system() == "Linux":
+            lib = ctypes.CDLL('./libgeomod.so') #linux
+        elif platform.system() == "Windows":
+            lib = ctypes.windll.LoadLibrary(os.path.dirname(os.path.abspath(__file__)) + os.path.sep +"libgeomodwin1.dll") #windows
+        else:
+            print("Your operative system is not supported")
         lib.get_model_bounds.restype = ndpointer(dtype=ctypes.c_int, shape=(6,))
         boundaries = lib.get_model_bounds(filename_ctypes)
         (self.xmin, self.xmax, self.ymin, self.ymax, self.zmin, self.zmax) = boundaries
         self.extent_x = self.xmax - self.xmin
         self.extent_y = self.ymax - self.ymin
         self.extent_z = self.zmax - self.zmin
-        
+
     def update_from_geomodeller_project(self, xml_filename):
         """Update grid properties directly from Geomodeller project
-        
+
         **Arguments**:
             - *xml_filename* = string: filename of Geomodeller XML file
         """
@@ -169,40 +178,48 @@ class GeoGrid():
                         cell_position.append(self.cell_centers_y[j])
                         cell_position.append(self.cell_centers_z[k])
                         ids.append((i,j,k))
-            
+
         # prepare variables for cpp function
         coord_ctypes = (ctypes.c_double * len(cell_position))(*cell_position)
         coord_len = len(cell_position)
         # call cpp function
-        lib = ctypes.CDLL('./libgeomod.so')
+                    #Detection of operative system:
+        if platform.system() == "Linux":
+            lib = ctypes.CDLL('./libgeomod.so') #linux
+        elif platform.system() == "Windows":
+            lib = ctypes.windll.LoadLibrary(os.path.dirname(os.path.abspath(__file__)) + os.path.sep +"libgeomodwin1.dll") #windows
+        else:
+            print("Your operative system is not supported")
+        #lib = ctypes.CDLL('./libgeomod.so') for linux
+    #    lib = ctypes.windll.LoadLibrary(os.path.dirname(os.path.abspath(__file__)) + os.path.sep +"libgeomodwin1.dll") # for windows
         lib.compute_irregular_grid.restype = ndpointer(dtype=ctypes.c_int, shape=(coord_len/3,))
         formations_raw = lib.compute_irregular_grid(filename_ctypes, coord_ctypes, coord_len)
         # re-sort formations into array
         for i in range(len(formations_raw)):
             self.grid[ids[i][0],ids[i][1],ids[i][2]] = formations_raw[i]
-            
+
     def set_densities(self, densities):
         """Set layer densities
-        
+
         **Arguments**:
             - *densities* = dictionary of floats: densities for geology ids
         """
         self.densities = densities
-        
+
     def set_sus(self, sus):
         """Set layer susceptibilities
-        
+
         **Arguments**:
             - *us* = dictionary of floats: magnetic susceptibilities for geology ids
         """
         self.sus = sus
-        
+
     def write_noddy_files(self, **kwds):
         """Create Noddy block model files (for grav/mag calculation)
-        
+
         **Optional keywords**:
             - *gps_range* = float : set GPS range (default: 1200.)
-        
+
         Method generates the files required to run the forward gravity/ magnetics response
         from the block model:
         - model.g00 = file with basic model information
@@ -210,7 +227,7 @@ class GeoGrid():
         - base.his = Noddy history file with some basic settings
         """
         self.gps_range = kwds.get("gps_range", 1200.)
-        
+
         if not hasattr(self, 'basename'):
             self.basename = "geogrid"
         f_g12 = open(self.basename + ".g12", 'w')
@@ -234,7 +251,7 @@ class GeoGrid():
 
         if not hasattr(self, "unit_ids"):
             self.determine_geology_ids()
-        
+
         #=======================================================================
         # # create file with base settings (.g00)
         #=======================================================================
@@ -252,7 +269,7 @@ class GeoGrid():
                                                                     self.zmin))
         f_g01.write("NUMBER OF LAYERS = %d\n" % self.nz)
         for k in range(self.nz):
-            f_g01.write("\tLAYER %d DIMENSIONS (X Y) = %d %d\n" % (k, 
+            f_g01.write("\tLAYER %d DIMENSIONS (X Y) = %d %d\n" % (k,
                                                                    self.nx + 2 * (self.gps_range / self.delx[0]),
                                                                    self.ny + 2 * (self.gps_range / self.dely[0])))
         f_g01.write("NUMBER OF CUBE SIZES = %d\n" % self.nz)
@@ -273,12 +290,12 @@ INDEXED DATA FORMAT = Yes
             f_g01.write("ROCK DEFINITION Layer %d = %d\n" % (i, i))
             f_g01.write("\tDensity = %f\n" % self.densities[int(i)])
             f_g01.write("\tSus = %f\n" % self.sus[int(i)])
-        
+
         #=======================================================================
         # Create g12 file
         #=======================================================================
-        
-        # write geology blocks to file 
+
+        # write geology blocks to file
         for k in range(self.nz):
             # this worked for geophysics, but not for re-import with pynoddy:
 #             for val in self.grid[:,:,k].ravel(order = 'A'):
@@ -289,10 +306,10 @@ INDEXED DATA FORMAT = Yes
                 f_g12.write("\n")
             # f_g12.write(['%d\t' % i for i in self.grid[:,:,k].ravel()])
             f_g12.write("\n")
-        
+
         f_g12.close()
         f_g01.close()
-                
+
         #=======================================================================
         # # create noddy history file for base settings
         #=======================================================================
@@ -310,20 +327,20 @@ INDEXED DATA FORMAT = Yes
                           'layer_names' : layer_names,
                           'layer_thickness' : layer_thicknesses}
         nm.add_event('stratigraphy', strati_options)
-        
+
         # set grid origin and extent:
         nm.set_origin(self.xmin, self.ymin, self.zmin)
         nm.set_extent(self.extent_x, self.extent_y, self.extent_z)
-        
+
         nm.write_history(history)
-        
 
 
-        
-    
+
+
+
     def set_dimensions(self, **kwds):
         """Set model dimensions, if no argument provided: xmin = 0, max = sum(delx) and accordingly for y,z
-        
+
         **Optional keywords**:
             - *dim* = (xmin, xmax, ymin, ymax, zmin, zmax) : set dimensions explicitly
         """
@@ -332,7 +349,7 @@ INDEXED DATA FORMAT = Yes
         else:
             self.xmin, self.ymin, self.zmin = (0., 0., 0.)
             self.xmax, self.ymax, self.zmax = (sum(self.delx), sum(self.dely), sum(self.delz))
-    
+
     def determine_cell_centers(self):
         """Determine cell centers for all coordinate directions in "real-world" coordinates"""
         if not hasattr(self, 'xmin'):
@@ -343,7 +360,7 @@ INDEXED DATA FORMAT = Yes
         self.cell_centers_x = np.array([sum_delx[i] - self.delx[i] / 2. for i in range(self.nx)]) + self.xmin
         self.cell_centers_y = np.array([sum_dely[i] - self.dely[i] / 2. for i in range(self.ny)]) + self.ymin
         self.cell_centers_z = np.array([sum_delz[i] - self.delz[i] / 2. for i in range(self.nz)]) + self.zmin
-        
+
     def determine_cell_boundaries(self):
         """Determine cell boundaries for all coordinates in "real-world" coordinates"""
         if not hasattr(self, 'xmin'):
@@ -360,27 +377,27 @@ INDEXED DATA FORMAT = Yes
         self.boundaries_z = np.ndarray((self.nz+1))
         self.boundaries_z[0] = 0
         self.boundaries_z[1:] = sum_delz
-        
+
         # create a list with all bounds
         self.bounds = [self.boundaries_y[0], self.boundaries_y[-1],
                        self.boundaries_x[0], self.boundaries_x[-1],
                        self.boundaries_z[0], self.boundaries_z[-1]]
-            
-    
+
+
     def adjust_gridshape(self):
         """Reshape numpy array to reflect model dimensions"""
         self.grid = np.reshape(self.grid, (self.nz, self.ny, self.nx))
         self.grid = np.swapaxes(self.grid, 0, 2)
         # self.grid = np.swapaxes(self.grid, 0, 1)
-        
+
     def plot_section(self, direction, cell_pos='center', **kwds):
         """Plot a section through the model in a given coordinate direction
-        
+
         **Arguments**:
             - *direction* = 'x', 'y', 'z' : coordinate direction for section position
             - *cell_pos* = int/'center','min','max' : cell position, can be given as
             value of cell id, or as 'center' (default), 'min', 'max' for simplicity
-            
+
         **Optional Keywords**:
             - *cmap* = mpl.colormap : define colormap for plot (default: jet)
             - *colorbar* = bool: attach colorbar (default: True)
@@ -412,7 +429,7 @@ INDEXED DATA FORMAT = Yes
             grid_slice = self.grid[pos,:,:]
             grid_slice = grid_slice.transpose()
             aspect = self.extent_z/self.extent_x * ve
-        elif direction == 'y':           
+        elif direction == 'y':
             if type(cell_pos) == str:
                 # decipher cell position
                 if cell_pos == 'center' or cell_pos == 'centre':
@@ -437,9 +454,9 @@ INDEXED DATA FORMAT = Yes
                     pos = self.nz
             else:
                 pos = cell_pos
-            grid_slice = self.grid[:,:,pos].transpose()           
+            grid_slice = self.grid[:,:,pos].transpose()
             aspect = 1.
-            
+
         if not kwds.has_key('ax'):
             colorbar = kwds.get('colorbar', True)
             # create new axis for plot
@@ -448,7 +465,7 @@ INDEXED DATA FORMAT = Yes
         else:
             colorbar = False
             ax = kwds['ax']
-        
+
         if not hasattr(self, 'unit_ids'):
             self.determine_geology_ids()
         if rescale:
@@ -466,38 +483,38 @@ INDEXED DATA FORMAT = Yes
         if colorbar:
 #            divider = mpl_toolkits.axes_grid1.make_axes_locatable(ax)
 #            cax = divider.append_axes("bottom", size="5%", pad=0.2)
-            cbar1 = fig.colorbar(im, orientation="horizontal")        
+            cbar1 = fig.colorbar(im, orientation="horizontal")
             ticks = np.arange(vmin, vmax+0.1, int(np.log2(vmax-vmin)/1.2), dtype='int')
             cbar1.set_ticks(ticks)
     #         cbar1.set_ticks(self.unit_ids[::int(np.log2(len(self.unit_ids)/2))])
             cbar1.set_label("Geology ID")
     #         cax.xaxis.set_major_formatter(FormatStrFormatter("%d"))
-        
-        
+
+
         if kwds.has_key("ax"):
             # return image and do not show
             return im
-        
+
         if kwds.has_key('savefig') and kwds['savefig']:
             # save to file
             filename = kwds.get("fig_filename", "grid_section_direction_%s_pos_%d.png" %
                                 (direction, cell_pos))
             plt.savefig(filename)
-            
+
         else:
             plt.show()
-        
+
     def export_to_vtk(self, vtk_filename="geo_grid", real_coords = True, **kwds):
         """Export grid to VTK for visualisation
-        
+
         **Arguments**:
             - *vtk_filename* = string : vtk filename (obviously...)
             - *real_coords* = bool : model extent in "real world" coordinates
-            
+
         **Optional Keywords**:
             - *grid* = numpy grid : grid to save to vtk (default: self.grid)
             - *var_name* = string : name of variable to plot (default: Geology)
-        
+
         Note: requires pyevtk, available at: https://bitbucket.org/pauloh/pyevtk
         """
         grid = kwds.get("grid", self.grid)
@@ -510,24 +527,24 @@ INDEXED DATA FORMAT = Yes
         x[1:] = np.cumsum(self.delx)
         y[1:] = np.cumsum(self.dely)
         z[1:] = np.cumsum(self.delz)
-        
-        
-        
+
+
+
         # plot in coordinates
         if real_coords:
             x += self.xmin
             y += self.ymin
             z += self.zmin
-        
-        
+
+
         gridToVTK(vtk_filename, x, y, z,
                   cellData = {var_name: grid})
-        
+
     def export_to_csv(self, filename = "geo_grid.csv"):
         """Export grid to x,y,z,value pairs in a csv file
-        
+
         Ordering is x-dominant (first increase in x, then y, then z)
-        
+
         **Arguments**:
             - *filename* = string : filename of csv file (default: geo_grid.csv)
         """
@@ -537,16 +554,16 @@ INDEXED DATA FORMAT = Yes
                 for xx in self.delx:
                     f.write("%.1f,%.1f,%.1f,%.d" % (xx,yy,zz,self.grid[xx,yy,zz]))
         f.close()
-        
-        
+
+
     def determine_geology_ids(self):
         """Determine all ids assigned to cells in the grid"""
         self.unit_ids = np.unique(self.grid)
-        
+
     def get_name_mapping_from_file(self, filename):
         """Get the mapping between unit_ids in the model and real geological names
         from a csv file (e.g. the SHEMAT property file)
-        
+
         **Arguments**:
             - *filename* = string : filename of csv file with id, name entries
         """
@@ -555,19 +572,19 @@ INDEXED DATA FORMAT = Yes
         for line in filelines:
             l = line.split(",")
             self.unit_name[int(l[1])] = l[0]
-            
+
     def get_name_mapping_from_dict(self, unit_name_dict):
         """Get the name mapping directly from a dictionary
-        
+
         **Arguments**:
             - *unit_name_dict* = dict with "name" : unit_id (int) pairs
         """
         self.unit_name = unit_name_dict
-            
-            
+
+
     def remap_ids(self, mapping_dictionary):
         """Remap geological unit ids to new ids as defined in mapping dictionary
-        
+
         **Arguments**:
             - *mapping_dictionary* = dict : {1 : 1, 2 : 3, ...} : e.g.: retain
             id 1, but map id 2 to 3 (note: if id not specified, it will be retained)
@@ -586,16 +603,16 @@ INDEXED DATA FORMAT = Yes
             self.grid[geol_grid_ind[k]] = v
         # update global geology ids
         self.determine_geology_ids()
-        
+
     def determine_cell_volumes(self):
         """Determine cell volumes for each cell (e.g. for total formation volume calculation)"""
         self.cell_volume = np.ndarray(np.shape(self.grid))
         for k,dz in enumerate(self.delz):
             for j,dy in enumerate(self.dely):
                 for i,dx in enumerate(self.delx):
-                    self.cell_volume[i,j,k] = dx * dy * dz        
-    
-    
+                    self.cell_volume[i,j,k] = dx * dy * dz
+
+
     def determine_indicator_grids(self):
         """Determine indicator grids for all geological units"""
         self.indicator_grids = {}
@@ -604,10 +621,10 @@ INDEXED DATA FORMAT = Yes
         grid_ones = np.ones(np.shape(self.grid))
         for unit_id in self.unit_ids:
             self.indicator_grids[unit_id] = grid_ones * (self.grid == unit_id)
-     
+
     def determine_id_volumes(self):
         """Determine the total volume of each unit id in the grid
-        
+
         (for example for cell discretisation studies, etc."""
         if not hasattr(self, 'cell_volume'):
             self.determine_cell_volumes()
@@ -616,7 +633,7 @@ INDEXED DATA FORMAT = Yes
         self.id_volumes = {}
         for unit_id in self.unit_ids:
             self.id_volumes[unit_id] = np.sum(self.indicator_grids[unit_id] * self.cell_volume)
-        
+
     def print_unit_names_volumes(self):
         """Formatted output to STDOUT of unit names (or ids, if names are note
         defined) and calculated volumes
@@ -628,22 +645,22 @@ INDEXED DATA FORMAT = Yes
             # print with real geological names
             print("Total volumes of modelled geological units:\n")
             for unit_id in self.unit_ids:
-                print("%26s : %.2f km^3" % (self.unit_name[unit_id], 
+                print("%26s : %.2f km^3" % (self.unit_name[unit_id],
                                             self.id_volumes[unit_id]/1E9))
         else:
             # print with unit ids only
             print("Total volumes of modelled geological units:\n")
             for unit_id in self.unit_ids:
-                print("%3d : %.2f km^3" % (unit_id, 
+                print("%3d : %.2f km^3" % (unit_id,
                                             self.id_volumes[unit_id]/1E9))
-            
-               
+
+
     def extract_subgrid(self, subrange, **kwds):
         """Extract a subgrid model from existing grid
-        
+
         **Arguments**:
             - *subrange* = (x_from, x_to, y_from, y_to, z_from, z_to) : range for submodel in either cell or world coords
-        
+
         **Optional keywords**:
             - *range_type* = 'cell', 'world' : define if subrange in cell ids (default) or real-world coordinates
         """
@@ -651,7 +668,7 @@ INDEXED DATA FORMAT = Yes
 
         if not hasattr(self, 'boundaries_x'):
             self.determine_cell_boundaries()
-        
+
         if range_type == 'world':
             # determine cells
             subrange[0] = np.argwhere(self.boundaries_x > subrange[0])[0][0]
@@ -660,20 +677,20 @@ INDEXED DATA FORMAT = Yes
             subrange[3] = np.argwhere(self.boundaries_y < subrange[3])[-1][0]
             subrange[4] = np.argwhere(self.boundaries_z > subrange[4])[0][0]
             subrange[5] = np.argwhere(self.boundaries_z < subrange[5])[-1][0]
-            
+
         # create a copy of the original grid
         import copy
         subgrid = copy.deepcopy(self)
-        
+
         # extract grid
         subgrid.grid = self.grid[subrange[0]:subrange[1],
                                  subrange[2]:subrange[3],
                                  subrange[4]:subrange[5]]
-        
+
         subgrid.nx = subrange[1] - subrange[0]
         subgrid.ny = subrange[3] - subrange[2]
         subgrid.nz = subrange[5] - subrange[4]
-        
+
         # update extent
         subgrid.xmin = self.boundaries_x[subrange[0]]
         subgrid.xmax = self.boundaries_x[subrange[1]]
@@ -681,37 +698,37 @@ INDEXED DATA FORMAT = Yes
         subgrid.ymax = self.boundaries_y[subrange[3]]
         subgrid.zmin = self.boundaries_z[subrange[4]]
         subgrid.zmax = self.boundaries_z[subrange[5]]
-        
+
         subgrid.extent_x = subgrid.xmax - subgrid.xmin
         subgrid.extent_y = subgrid.ymax - subgrid.ymin
         subgrid.extent_z = subgrid.zmax - subgrid.zmin
-        
+
         # update cell spacings
         subgrid.delx = self.delx[subrange[0]:subrange[1]]
         subgrid.dely = self.dely[subrange[2]:subrange[3]]
         subgrid.delz = self.delz[subrange[4]:subrange[5]]
-        
+
         # now: update other attributes:
         subgrid.determine_cell_centers()
         subgrid.determine_cell_boundaries()
         subgrid.determine_cell_volumes()
         subgrid.determine_geology_ids()
-        
+
         # finally: return subgrid
         return subgrid
-        
-        
-        
-# ******************************************************************************                                                                               
-#  Some additional helper functions   
-# ******************************************************************************                                                                               
-        
+
+
+
+# ******************************************************************************
+#  Some additional helper functions
+# ******************************************************************************
+
 def combine_grids(G1, G2, direction, merge_type = 'keep_first', **kwds):
     """Combine two grids along one axis
-    
+
     ..Note: this implementation assumes (for now) that the overlap is perfectly matching,
     i.e. grid cell sizes identical and at equal positions, or that they are perfectly adjacent!
-    
+
     **Arguments**:
         - G1, G2 = GeoGrid : grids to be combined
         - direction = 'x', 'y', 'z': direction in which grids are combined
@@ -720,15 +737,15 @@ def combine_grids(G1, G2, direction, merge_type = 'keep_first', **kwds):
             'keep_second' : keep elements of second grid
             'random' : randomly choose an element to retain
         ..Note: all other dimensions must be matching perfectly!!
-    
+
     **Optional keywords**:
         - *overlap_analysis* = bool : perform a detailed analysis of the overlapping area, including
         mismatch. Also returns a second item, a GeoGrid with information on mismatch!
-    
+
     **Returns**:
         - *G_comb* = GeoGrid with combined grid
         - *G_overlap* = Geogrid with analysis of overlap (of overlap_analysis=True)
-    
+
     """
     overlap_analysis = kwds.get("overlap_analysis", False)
     # first step: determine overlap
@@ -746,11 +763,11 @@ def combine_grids(G1, G2, direction, merge_type = 'keep_first', **kwds):
             G_high = G1
             G_low = G2
 
-        # check if all other dimensions are perfectly matching 
+        # check if all other dimensions are perfectly matching
         if (G1.ymin != G2.ymin) or (G1.zmin != G2.zmin) or \
             (G1.ymax != G2.ymax) or (G1.zmax != G2.zmax):
-            raise ValueError("Other dimensions (apart from %s) not perfectly matching! Check and try again!" % direction)    
-    
+            raise ValueError("Other dimensions (apart from %s) not perfectly matching! Check and try again!" % direction)
+
     elif direction == 'y':
         if G2.ymax > G1.ymax:
             overlap_min = G2.ymin
@@ -765,7 +782,7 @@ def combine_grids(G1, G2, direction, merge_type = 'keep_first', **kwds):
             G_high = G1
             G_low = G2
 
-        # check if all other dimensions are perfectly matching 
+        # check if all other dimensions are perfectly matching
         if (G1.xmin != G2.xmin) or (G1.zmin != G2.zmin) or \
             (G1.xmax != G2.xmax) or (G1.zmax != G2.zmax):
             raise ValueError("Other dimensions (apart from %s) not perfectly matching! Check and try again!" % direction)
@@ -784,38 +801,38 @@ def combine_grids(G1, G2, direction, merge_type = 'keep_first', **kwds):
             G_high = G1
             G_low = G2
 
-        # check if all other dimensions are perfectly matching 
+        # check if all other dimensions are perfectly matching
         if (G1.ymin != G2.ymin) or (G1.xmin != G2.xmin) or \
             (G1.ymax != G2.ymax) or (G1.xmax != G2.xmax):
             raise ValueError("Other dimensions (apart from %s) not perfectly matching! Check and try again!" % direction)
 
     overlap = overlap_max - overlap_min
-        
+
     if overlap == 0:
         print("Grids perfectly adjacent")
     elif overlap < 0:
         raise ValueError("No overlap between grids! Check and try again!")
     else:
         print("Positive overlap in %s direction of %f meters" % (direction, overlap))
-      
+
     # determine cell centers
     G1.determine_cell_centers()
     G2.determine_cell_centers()
-    
+
     # intialise new grid
     G_comb = GeoGrid()
     # initialise overlap grid, if analyis performed
     if overlap_analysis:
         G_overlap = GeoGrid()
-    
-    
+
+
     if direction == 'x':
         pass
     elif direction == 'y':
         #=======================================================================
         # Perform overlap analysis
         #=======================================================================
-        
+
         # initialise overlap grid with dimensions of overlap
         G_overlap.set_dimensions(dim = (G1.xmin, G1.xmax, overlap_min, overlap_max, G1.zmin, G1.zmax))
         G_low_ids = np.where(G_low.cell_centers_y > overlap_min)[0]
@@ -833,16 +850,16 @@ def combine_grids(G1, G2, direction, merge_type = 'keep_first', **kwds):
         # export with pyevtk - looks like a bug in pyevtk...
         G_overlap.grid = G_overlap.grid + np.zeros(G_overlap.grid.shape)
         #
-        
+
         #=======================================================================
         # Set up combined grid
         #=======================================================================
-        
+
         G_comb.set_dimensions(dim = (G1.xmin, G1.xmax, G_low.ymin, G_high.ymax, G1.zmin, G1.zmax))
         # combine dely arrays
         dely = np.hstack((G_low.dely[:G_low_ids[0]], G_high.dely))
-        G_comb.set_delxyz((delx, dely, delz))        
-        
+        G_comb.set_delxyz((delx, dely, delz))
+
         #=======================================================================
         # Now merge grids
         #=======================================================================
@@ -851,26 +868,26 @@ def combine_grids(G1, G2, direction, merge_type = 'keep_first', **kwds):
                 G_comb.grid = np.concatenate((G2.grid[:,:G_low_ids[0],:], G1.grid), axis=1)
             else:
                 G_comb.grid = np.concatenate((G1.grid, G2.grid[:,:G_low_ids[0],:]), axis=1)
-        
+
         elif merge_type == 'keep_second':
             pass
         elif merge_type == 'random':
             pass
         else:
             raise ValueError("Merge type %s not recognised! Please check and try again!" % merge_type)
-        
+
     elif direction == 'z':
         pass
-      
-    
-      
-    
-    # Return combined grid and results of overlap analysis, if determined  
+
+
+
+
+    # Return combined grid and results of overlap analysis, if determined
     if overlap_analysis:
         return G_comb, G_overlap
     else:
         return G_comb
-    
+
 def optimial_cell_increase(starting_cell_width, n_cells, width):
     """Determine an array with optimal cell width for a defined starting cell width,
     total number of cells, and total width
@@ -885,13 +902,13 @@ def optimial_cell_increase(starting_cell_width, n_cells, width):
 
     **Returns**:
         del_array : numpy.ndarray with cell discretisations
-    
+
     Note: optmisation with scipy.optimize - better (analytical?) methods might exist but
     I can't think of them at the moment
     """
     import scipy.optimize
     # define some helper functions
-    
+
     def width_sum(inc_factor, inner_cell, n_cells, total_width):
         return sum(del_array(inc_factor, inner_cell, n_cells)) - total_width
 
@@ -900,7 +917,7 @@ def optimial_cell_increase(starting_cell_width, n_cells, width):
 
     # now the actual optimisation step:
     opti_factor = scipy.optimize.fsolve(width_sum, 1.1, (starting_cell_width, n_cells, width))
-    
+
     # return the discretisation array
     return del_array(opti_factor, starting_cell_width, n_cells).flatten()
 
@@ -908,25 +925,3 @@ def optimial_cell_increase(starting_cell_width, n_cells, width):
 
 if __name__ == '__main__':
     pass
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
