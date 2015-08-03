@@ -1,0 +1,36 @@
+﻿Build started 29/07/2015 21:44:09.
+     1>Project "C:\Users\Miguel\sciebo\pygeomod\pygeomod\libgeomodwin1\APIexample.vcxproj" on node 2 (Build target(s)).
+     1>ClCompile:
+         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\CL.exe /c /Zi /nologo /W3 /WX- /O2 /Oy- /D WIN32 /D NDEBUG /D _WINDOWS /Gm- /EHsc /MD /GS /fp:precise /Zc:wchar_t /Zc:forScope /Fo"Release\\" /Fd"Release\vc120.pdb" /Gd /TP /analyze- /errorReport:prompt geomodeller_control_2.cpp stdafx.cpp
+         geomodeller_control_2.cpp
+     1>geomodeller_control_2.cpp(45): warning C4244: '=' : conversion from 'double' to 'int', possible loss of data
+     1>geomodeller_control_2.cpp(46): warning C4244: '=' : conversion from 'double' to 'int', possible loss of data
+     1>geomodeller_control_2.cpp(47): warning C4244: '=' : conversion from 'double' to 'int', possible loss of data
+     1>geomodeller_control_2.cpp(48): warning C4244: '=' : conversion from 'double' to 'int', possible loss of data
+     1>geomodeller_control_2.cpp(49): warning C4244: '=' : conversion from 'double' to 'int', possible loss of data
+     1>geomodeller_control_2.cpp(50): warning C4244: '=' : conversion from 'double' to 'int', possible loss of data
+     1>geomodeller_control_2.cpp(124): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\stdio.h(211) : see declaration of 'fopen'
+     1>geomodeller_control_2.cpp(177): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\stdio.h(211) : see declaration of 'fopen'
+     1>geomodeller_control_2.cpp(187): warning C4996: 'fopen': This function or variable may be unsafe. Consider using fopen_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\include\stdio.h(211) : see declaration of 'fopen'
+     1>geomodeller_control_2.cpp(203): warning C4101: 'zmin' : unreferenced local variable
+     1>geomodeller_control_2.cpp(203): warning C4101: 'zmax' : unreferenced local variable
+     1>geomodeller_control_2.cpp(203): warning C4101: 'ymin' : unreferenced local variable
+     1>geomodeller_control_2.cpp(203): warning C4101: 'xmax' : unreferenced local variable
+     1>geomodeller_control_2.cpp(203): warning C4101: 'xmin' : unreferenced local variable
+     1>geomodeller_control_2.cpp(203): warning C4101: 'ymax' : unreferenced local variable
+         stdafx.cpp
+         Generating Code...
+       Link:
+         C:\Program Files (x86)\Microsoft Visual Studio 12.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"C:\Users\Miguel\sciebo\pygeomod\pygeomod\libgeomodwin1\Release\libgeomodwin_pa.exe" /INCREMENTAL /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /manifest:embed /DEBUG /PDB:"C:\Users\Miguel\sciebo\pygeomod\pygeomod\libgeomodwin1\Release\libgeomodwin_pa.pdb" /SUBSYSTEM:WINDOWS /OPT:REF /OPT:ICF /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:\Users\Miguel\sciebo\pygeomod\pygeomod\libgeomodwin1\Release\libgeomodwin_pa.lib" /MACHINE:X86 /SAFESEH Release\geomodeller_control_2.obj
+         Release\stdafx.obj
+         ..\..\bin\geomodellerapi.lib
+     1>LINK : warning LNK4075: ignoring '/INCREMENTAL' due to '/OPT:ICF' specification
+     1>LINK : fatal error LNK1181: cannot open input file '..\..\bin\geomodellerapi.lib'
+     1>Done Building Project "C:\Users\Miguel\sciebo\pygeomod\pygeomod\libgeomodwin1\APIexample.vcxproj" (Build target(s)) -- FAILED.
+
+Build FAILED.
+
+Time Elapsed 00:00:01.05

@@ -148,7 +148,7 @@ class GeoGrid():
         if platform.system() == "Linux":
             lib = ctypes.CDLL('./libgeomod.so') #linux
         elif platform.system() == "Windows":
-            lib = ctypes.windll.LoadLibrary(os.path.dirname(os.path.abspath(__file__)) + os.path.sep +"libgeomodwin1.dll") #windows
+            lib = ctypes.windll.LoadLibrary(os.path.dirname(os.path.abspath(__file__)) + os.path.sep +"libgeomodwin1.dll")     #windows
         else:
             print("Your operative system is not supported")
         lib.get_model_bounds.restype = ndpointer(dtype=ctypes.c_int, shape=(6,))
@@ -158,6 +158,118 @@ class GeoGrid():
         self.extent_y = self.ymax - self.ymin
         self.extent_z = self.zmax - self.zmin
 
+
+# functions to try to improve the performance. They sucks yet.
+    def update_from_geomodeller_project_OP(self, xml_filename):
+        """Update grid properties directly from Geomodeller project
+
+        **Arguments**:
+            - *xml_filename* = string: filename of Geomodeller XML file
+        """
+        filename_ctypes = ctypes.c_char_p(xml_filename)
+
+
+
+        #print filename_ctypes
+        # create cell position list with [x0, y0, z0, ... xn, yn, zn]
+        cell_position = []
+        ids = []
+        formations_raw = []
+        # check if cell centers are defined - if not, do so!
+
+        if platform.system() == "Linux":
+            lib = ctypes.CDLL('./libgeomod.so') #linux
+        elif platform.system() == "Windows":
+            lib = ctypes.windll.LoadLibrary(os.path.dirname(os.path.abspath(__file__)) + os.path.sep +"libgeomodwin_op5.dll") #windows
+        else:
+            print("Your operative system is not supported")
+
+        lib.compute_irregular_grid.restype = ndpointer(dtype=ctypes.c_int, shape=(3,))
+        # This is the function wich needs GPU!!!
+
+        #lib.init_api(filename_ctypes)
+
+        # check if cell centers are defined - if
+
+
+        if not hasattr(self, 'cell_centers_x'):
+            self.determine_cell_centers()
+            for k in range(self.nz):
+                for j in range(self.ny):
+                    for i in range(self.nx):
+                        cell_position.append(self.cell_centers_x[i])
+                        cell_position.append(self.cell_centers_y[j])
+                        cell_position.append(self.cell_centers_z[k])
+                        print len(cell_position), cell_position
+                        coord_ctypes = (ctypes.c_double * 3)(*cell_position)
+                        formation2 = lib.compute_irregular_grid_op(coord_ctypes)
+                        #formations_raw.append(lib.compute_irregular_grid(coord_ctypes))
+                        print "e", formation2
+                        cell_position = []
+                        ids.append((i,j,k))
+                        print len(formations_raw)
+        # prepare variables for cpp function
+
+        # call cpp function
+                    #Detection of operative system:
+        # re-sort formations into array
+
+        for i in range(len(formations_raw)):
+            self.grid[ids[i][0],ids[i][1],ids[i][2]] = formations_raw[i]
+
+
+    def update_from_geomodeller_project_OP2(self,xml_filename):
+        """Update grid properties directly from Geomodeller project
+
+        **Arguments**:
+            - *xml_filename* = string: filename of Geomodeller XML file
+        """
+        filename_ctypes = ctypes.c_char_p(xml_filename)
+
+        if platform.system() == "Linux":
+            lib = ctypes.CDLL('./libgeomod.so') #linux
+        elif platform.system() == "Windows":
+            lib = ctypes.windll.LoadLibrary(os.path.dirname(os.path.abspath(__file__)) + os.path.sep +"libgeomodwin_test2.dll") #windows
+        else:
+            print("Your operative system is not supported")
+
+        #print filename_ctypes
+        # create cell position list with [x0, y0, z0, ... xn, yn, zn]
+        cell_position = []
+        ids = []
+        formations_sol = []
+        # check if cell centers are defined - if not, do so!
+        if not hasattr(self, 'cell_centers_x'):
+            self.determine_cell_centers()
+            for k in range(self.nz):
+                for j in range(self.ny):
+                    for i in range(self.nx):
+                        cell_position.append(self.cell_centers_x[i])
+                        cell_position.append(self.cell_centers_y[j])
+                        cell_position.append(self.cell_centers_z[k])
+
+
+                        coord_ctypes = (ctypes.c_double * len(cell_position))(*cell_position)
+                        coord_len = len(cell_position)
+
+                        lib.compute_irregular_grid.restype = ndpointer(dtype=ctypes.c_int, shape=(coord_len/3,))
+
+                        formations_raw = lib.compute_irregular_grid(filename_ctypes, coord_ctypes, coord_len)
+                        formations_sol.append(formations_raw)
+                    #    print formations_raw
+                        cell_position = []
+                        ids.append((i,j,k))
+
+        # prepare variables for cpp function
+
+        # call cpp function
+                    #Detection of operative system:
+
+        for i in range(len(formations_sol)):
+            self.grid[ids[i][0],ids[i][1],ids[i][2]] = formations_sol[i]
+
+
+
     def update_from_geomodeller_project(self, xml_filename):
         """Update grid properties directly from Geomodeller project
 
@@ -165,6 +277,7 @@ class GeoGrid():
             - *xml_filename* = string: filename of Geomodeller XML file
         """
         filename_ctypes = ctypes.c_char_p(xml_filename)
+        #print filename_ctypes
         # create cell position list with [x0, y0, z0, ... xn, yn, zn]
         cell_position = []
         ids = []
@@ -190,11 +303,12 @@ class GeoGrid():
             lib = ctypes.windll.LoadLibrary(os.path.dirname(os.path.abspath(__file__)) + os.path.sep +"libgeomodwin1.dll") #windows
         else:
             print("Your operative system is not supported")
-        #lib = ctypes.CDLL('./libgeomod.so') for linux
-    #    lib = ctypes.windll.LoadLibrary(os.path.dirname(os.path.abspath(__file__)) + os.path.sep +"libgeomodwin1.dll") # for windows
+        #print coord_len
         lib.compute_irregular_grid.restype = ndpointer(dtype=ctypes.c_int, shape=(coord_len/3,))
+        # This is the function wich needs GPU!!!
         formations_raw = lib.compute_irregular_grid(filename_ctypes, coord_ctypes, coord_len)
         # re-sort formations into array
+    #    print formations_raw
         for i in range(len(formations_raw)):
             self.grid[ids[i][0],ids[i][1],ids[i][2]] = formations_raw[i]
 
@@ -400,7 +514,10 @@ INDEXED DATA FORMAT = Yes
 
         **Optional Keywords**:
             - *cmap* = mpl.colormap : define colormap for plot (default: jet)
+            - *alpha* = define the transparencie for the plot (default: 1)
             - *colorbar* = bool: attach colorbar (default: True)
+            - *geomod_coord* = bool:  Plotting geomodeller coordinates instead voxels (default: False)
+            - *contour* = bool : Plotting contour of the layers contact
             - *rescale* = bool: rescale color bar to range of visible slice (default: False)
             - *ve* = float : vertical exageration (for plots in x,y-direction)
             - *figsize* = (x,y) : figsize settings for plot
@@ -410,11 +527,27 @@ INDEXED DATA FORMAT = Yes
             - *savefig* = bool : save figure to file (default: show)
             - *fig_filename* = string : filename to save figure
         """
+        # TO DO:
+        # - Colorbar in contourplots
+    #    print 1
         colorbar = kwds.get('colorbar', True)
         cmap = kwds.get('cmap', 'jet')
+        alpha = kwds.get('alpha', 1)
         rescale = kwds.get('rescale', False)
         ve = kwds.get('ve', 1.)
         figsize = kwds.get('figsize', (8,4))
+        geomod_coord =  kwds.get('geomod_coord', False)
+        contour = kwds.get('contour', False)
+
+        if not kwds.has_key('ax'):
+            colorbar = kwds.get('colorbar', True)
+            # create new axis for plot
+            fig = plt.figure(figsize=figsize)
+            ax = fig.add_subplot(111)
+        else:
+            colorbar = False
+            ax = kwds['ax']
+
         if direction == 'x':
             if type(cell_pos) == str:
                 # decipher cell position
@@ -428,7 +561,26 @@ INDEXED DATA FORMAT = Yes
                 pos = cell_pos
             grid_slice = self.grid[pos,:,:]
             grid_slice = grid_slice.transpose()
+            #print grid_slice
             aspect = self.extent_z/self.extent_x * ve
+            if geomod_coord:
+
+                ax.set_xticks(np.linspace(0,self.ny,6, endpoint = True, dtype = int))
+                ax.set_yticks(np.linspace(0,self.nz,6, endpoint = True, dtype = int))
+                ax.set_xticklabels(np.linspace(self.ymin,self.ymax,6,dtype = int, endpoint = True ))
+                ax.set_yticklabels(np.linspace(self.zmin,self.zmax,6,dtype = int, endpoint = True ))
+
+
+                ax.set_ylabel("z[m]")
+                ax.set_xlabel("y[m]")
+            else:
+                ax.set_ylabel("z[voxels]")
+                ax.set_xlabel("y[voxels]")
+
+            if contour:
+                ry = np.arange(self.nz)
+                rx = np.arange(self.ny)
+
         elif direction == 'y':
             if type(cell_pos) == str:
                 # decipher cell position
@@ -443,7 +595,26 @@ INDEXED DATA FORMAT = Yes
             grid_slice = self.grid[:,pos,:]
             grid_slice = grid_slice.transpose()
             aspect = self.extent_z/self.extent_y * ve
+            if geomod_coord:
+                #print np.linspace(0,self.extent_x,11), np.linspace(0,self.extent_x,11, endpoint = True)
+
+                ax.set_xticks(np.linspace(0,self.nx,6, endpoint = True, dtype = int))
+                ax.set_yticks(np.linspace(0,self.nz,6, endpoint = True, dtype = int))
+                ax.set_xticklabels(np.linspace(self.xmin,self.xmax,6, endpoint = True, dtype = int))
+                ax.set_yticklabels(np.linspace(self.zmin,self.zmax,6,dtype = int,endpoint = True ))
+                #ax.invert_yaxis
+                ax.set_ylabel("z[m]")
+                ax.set_xlabel("x[m]")
+            else:
+                ax.set_ylabel("z[voxels]")
+                ax.set_xlabel("x[voxels]")
+
+            if contour:
+                ry = np.arange(self.nz)
+                rx = np.arange(self.nx)
+
         elif direction == 'z' :
+            print 2
             if type(cell_pos) == str:
                 # decipher cell position
                 if cell_pos == 'center' or cell_pos == 'centre':
@@ -456,15 +627,25 @@ INDEXED DATA FORMAT = Yes
                 pos = cell_pos
             grid_slice = self.grid[:,:,pos].transpose()
             aspect = 1.
+            # setting labels
+            if geomod_coord:
+                print 3
+                print self.xmin, self.xmax, self.ymin, self.ymax, self.zmin, self.zmax
+                print np.linspace(self.xmin,self.xmax,6, endpoint = True, dtype = int)
+                print np.linspace(0,self.extent_y,6, endpoint = True, dtype = int)
+                ax.set_xticks(np.linspace(0,self.nx,6,dtype = int ))
+                ax.set_yticks(np.linspace(0,self.ny,6, endpoint = True, dtype = int))
+                ax.set_xticklabels(np.linspace(self.xmin,self.xmax,6,dtype = int ))
+                ax.set_yticklabels(np.linspace(self.ymin,self.ymax,6,dtype = int ))
+                ax.set_ylabel("y[m]")
+                ax.set_xlabel("x[m]")
+            else:
+                ax.set_ylabel("y[voxels]")
+                ax.set_xlabel("x[voxels]")
 
-        if not kwds.has_key('ax'):
-            colorbar = kwds.get('colorbar', True)
-            # create new axis for plot
-            fig = plt.figure(figsize=figsize)
-            ax = fig.add_subplot(111)
-        else:
-            colorbar = False
-            ax = kwds['ax']
+            if contour:
+                ry = np.arange(self.ny)
+                rx = np.arange(self.nx)
 
         if not hasattr(self, 'unit_ids'):
             self.determine_geology_ids()
@@ -474,12 +655,21 @@ INDEXED DATA FORMAT = Yes
         else: # use global range for better comparison
             vmin = min(self.unit_ids)
             vmax = max(self.unit_ids)
-        im = ax.imshow(grid_slice, interpolation='nearest',
-                       cmap = cmap,
+
+
+        if contour:
+            Rx, Ry = np.meshgrid(rx, ry)
+
+            im = ax.contour(Rx, Ry, grid_slice, interpolation='nearest', cmap = cmap, alpha = alpha)
+
+
+        else:
+            im = ax.imshow(grid_slice, interpolation='nearest',
+                      cmap = cmap,
                        origin='lower_left',
                        vmin = vmin,
-                       vmax = vmax,
-                       aspect = aspect)
+                      vmax = vmax,
+                      aspect = aspect)
         if colorbar:
 #            divider = mpl_toolkits.axes_grid1.make_axes_locatable(ax)
 #            cax = divider.append_axes("bottom", size="5%", pad=0.2)
@@ -489,7 +679,18 @@ INDEXED DATA FORMAT = Yes
     #         cbar1.set_ticks(self.unit_ids[::int(np.log2(len(self.unit_ids)/2))])
             cbar1.set_label("Geology ID")
     #         cax.xaxis.set_major_formatter(FormatStrFormatter("%d"))
+        # Setting labels
+        #ax.set_xlabel("X[m]")
+        #ax.set_ylabel("y[m]")
+        #ax.set_zlabel("z[m]")
 
+            # Plotting geomodeller coordinates instead voxels
+    #    if geomod_coord:
+    #        print "we are here"
+    #        #xticks = np.linspace(0,self.extent_x,11)
+            #ax.set_xticks(xticks)
+            #print xticks
+    #        ax.set_xticklabels(np.round(np.linspace(0,self.extent_x,11),0)); # use LaTeX formatted labels
 
         if kwds.has_key("ax"):
             # return image and do not show
@@ -502,7 +703,13 @@ INDEXED DATA FORMAT = Yes
             plt.savefig(filename)
 
         else:
+
             plt.show()
+
+
+
+
+
 
     def export_to_vtk(self, vtk_filename="geo_grid", real_coords = True, **kwds):
         """Export grid to VTK for visualisation
