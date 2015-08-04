@@ -275,7 +275,7 @@ class GeomodellerClass:
         try:
             self.formations
         except AttributeError:
-#            print "Create sections Data array"
+            #            print "Create sections Data array"
             self.get_formations()
         for formation in self.formations:
             self.formation_params[formation.get("Name")] = {}
@@ -285,7 +285,7 @@ class GeomodellerClass:
             self.formation_params[formation.get("Name")]["dens_mean"] = dens_simple.get("Mean")
             self.formation_params[formation.get("Name")]["dens_law"] = dens_simple.get("LawType")
             self.formation_params[formation.get("Name")]["dens_dev"] = dens_simple.get("Deviation")
-#             print geophys.getchildren()
+            #             print geophys.getchildren()
             mag = geophys.find("{"+self.xmlns+"}RemanantMagnetizationCompoundDistribution")
             mag_simple = mag.find("{"+self.xmlns+"}SimpleDistributionVector")
             self.formation_params[formation.get("Name")]["mag"] = mag_simple.get("Mean")
@@ -571,6 +571,93 @@ class GeomodellerClass:
           element_coords = element_point.find("{"+self.gml+"}coordinates")
           point_list.append((name+ " " + str(element_coords.text)))
         return point_list
+
+    def change_formation_values_PyMC(self, **args):
+
+
+        if args.has_key("info"):
+            section_dict = self.create_sections_dict()
+            contact_points_dict = {}
+            foliation_dict = {}
+            for i in range(len(section_dict)):
+                print "\n\n\n", section_dict.keys()[i], "\n"
+                print "Elements and their ID \n"
+                contact_points = self.get_formation_point_data(section_dict.values()[i])
+
+                for contact_point in contact_points:
+                    contact_points_dict[contact_point.get("ObservationID")] = contact_point
+                    print contact_point, contact_point.get("ObservationID")
+                #ObsID = contact_points.get("ObservationID")
+                foliations = self.get_foliations(section_dict.values()[i])
+
+                for foliation in foliations:
+                    # dictionary to access with azimth name
+                    foliation_dict[foliation.get("ObservationID")+"_a"] = foliation
+                    # dictionary to access with dip name
+                    foliation_dict[foliation.get("ObservationID")+"_d"] = foliation
+                    print foliation, foliation.get("ObservationID")
+                coord_interface = self.get_point_coordinates(contact_points)
+
+                print "\nDictionaries:\n ", contact_points_dict, "\n", foliation_dict
+
+                print "\n Contact points", contact_points, "\n", coord_interface, "\n"
+
+                print "foliations" , foliations,  "\n"
+                for i in range(len(foliations)):
+                    print "azimut:",self.get_foliation_azimuth(foliations[i])
+                    print "dip",self.get_foliation_dip(foliations[i])
+                    print "coordinates", self.get_foliation_coordinates(foliations[i])
+            return None
+        #========================
+        # change the stuff
+        #=======================
+        section_dict = self.create_sections_dict()
+        contact_points_dict = {}
+        foliation_dict = {}
+
+        #Creation of dictionaries according to the ObservationID
+        for i in range(len(section_dict)):
+            # Contact points:
+            contact_points = self.get_formation_point_data(section_dict.values()[i])
+            for contact_point in contact_points:
+                contact_points_dict[contact_point.get("ObservationID")] = contact_point
+
+            # Foliation Points
+            foliations = self.get_foliations(section_dict.values()[i])
+            for foliation in foliations:
+                # dictionary to access with azimth name
+                foliation_dict[foliation.get("ObservationID")+"_a"] = foliation
+                # dictionary to access with dip name
+                foliation_dict[foliation.get("ObservationID")+"_d"] = foliation
+
+        # Passing our chain values:
+            # Contact_points
+        if args.has_key("contact_points_mc"):
+            for contac_point_mc in args["contact_points_mc"]:
+                try:
+                    self.change_formation_point_pos(contact_points_dict[str(contac_point_mc)], y_coord = contac_point_mc.value)
+                except KeyError:
+                    print "The name of your PyMC variables (%s) does not agree with the ObservationID in the xml. Check misspellings." % str(contac_point_mc)
+                    continue
+            # Azimuths
+        if args.has_key("azimuths_mc"):
+            for azimuth_mc in args["azimuths_mc"]:
+                #print azimuth_mc, type(azimuth_mc)
+                try:
+                    self.change_foliation(foliation_dict[str(azimuth_mc)], azimuth = str(azimuth_mc.value))
+                except KeyError:
+                    print "The name of your PyMC variables (%s) does not agree with the ObservationID in the xml. Check misspellings." % str(azimuth_mc)
+                    continue
+            # Dips
+        if args.has_key("dips_mc"):
+            for dip_mc in args["dips_mc"]:
+                try:
+                    self.change_foliation(foliation_dict[str(dip_mc)], dip = str(dip_mc.value))
+                except KeyError:
+                    print "The name of your PyMC variables (%s) does not agree with the ObservationID in the xml. Check misspellings." % str(dip_mc)
+                    continue
+
+
     # To do: vectorize this
     def change_formation_point_pos(self, element, **args):
         """change position of formation point in section element
@@ -579,11 +666,12 @@ class GeomodellerClass:
         add_x_coord, add_y_coord : add values to existing coordinates
         use if_name = and if_provenance = to add conditions!
         print_points = bool: print the list of points that will be modified (default: False)"""
-    #    print "I am here"
+        #    print "I am here"
         #print_points = kwds.get('print_points', False)
         prov = element.get("Provenance")
+
         name = element.find("{"+self.xmlns+"}Data").get("Name")
-        print name
+
         if args.has_key("if_name"):
             if args["if_name"] != name: return
         if args.has_key("if_provenance"):
@@ -592,7 +680,7 @@ class GeomodellerClass:
         element_point = element.find("{"+self.gml+"}LineString")
         element_coords = element_point.find("{"+self.gml+"}coordinates")
         point_list = element_coords.text.split(" ")
-    #    print "poitn lits", point_list
+        #    print "poitn lits", point_list
         if point_list[-1] == '':
             point_list = point_list[0:-1]
         if len(point_list) > 1:
@@ -622,7 +710,7 @@ class GeomodellerClass:
                 #print array(args["y_coord"])
                 if shape(point_list) == shape(args["y_coord"]):
                     y_coords = array(args["y_coord"])
-        #            print "ycoords", y_coords
+                    #            print "ycoords", y_coords
                 else:
                     print "length of the points you want to change do not match with input dimensions"
             #print "Coordenates", x_coords, y_coords
@@ -860,9 +948,9 @@ class GeomodellerClass:
         # create list with tough names to check if name already exists
         tough_name_list = []
         for i,name in enumerate(self.formation_names):
-#            if self.formation_names[i] == '  out' or self.formation_names[i] == '  OUT':
-#                tough_name_list.append("OUT  ")
-#                continue
+            #    if self.formation_names[i] == '  out' or self.formation_names[i] == '  OUT':
+            #   tough_name_list.append("OUT  ")
+            #   continue
             cut_name = self.formation_names[i][0:5]
             if cut_name in tough_name_list:
                 for j in range(100):

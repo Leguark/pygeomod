@@ -659,8 +659,8 @@ INDEXED DATA FORMAT = Yes
 
         if contour:
             Rx, Ry = np.meshgrid(rx, ry)
-
-            im = ax.contour(Rx, Ry, grid_slice, interpolation='nearest', cmap = cmap, alpha = alpha)
+            #print np.amax(grid_slice)
+            im = ax.contour(Rx, Ry, grid_slice, int(np.amax(grid_slice)+1), interpolation='nearest', cmap = cmap, alpha = alpha)
 
 
         else:
