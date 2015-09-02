@@ -309,7 +309,7 @@ class GeomodellerClass:
             self.formation_params[formation.get("Name")]["heat_prod_dev"] = heat_prod_simple.get("Deviation")
 
             # same for other properties
-        #    print th_cond
+#            print th_cond
             #
             # !!! only simple distributions yet impl.
             #
@@ -451,13 +451,13 @@ class GeomodellerClass:
             data.append(r)
         return data
 
-        #    def set_drillhole_data(self, element, l):
-        #        """set drillhole data for element from list
-        #        element should be one of the drillhole file elements, i.e.
-        #        self.drillholes["survey"], self.drillholes["collar"]
-        #        or self.drillholes["geology"] """
-        #        return True
-        #
+#    def set_drillhole_data(self, element, l):
+#        """set drillhole data for element from list
+#        element should be one of the drillhole file elements, i.e.
+#        self.drillholes["survey"], self.drillholes["collar"]
+#        or self.drillholes["geology"] """
+#        return True
+#
     def create_fault_dict(self):
         """create dictionary for fault elements with names as keys"""
         # test if self.formations defined, if not -> create
@@ -584,41 +584,29 @@ class GeomodellerClass:
                 print "Elements and their ID \n"
                 contact_points = self.get_formation_point_data(section_dict.values()[i])
 
-                try:
-                    for contact_point in contact_points:
-                        contact_points_dict[contact_point.get("ObservationID")] = contact_point
-                        print contact_point, contact_point.get("ObservationID")
-                except TypeError:
-                    print "No contact points in the section"
+                for contact_point in contact_points:
+                    contact_points_dict[contact_point.get("ObservationID")] = contact_point
+                    print contact_point, contact_point.get("ObservationID")
                 #ObsID = contact_points.get("ObservationID")
                 foliations = self.get_foliations(section_dict.values()[i])
-                try:
-                    for foliation in foliations:
-                        # dictionary to access with azimth name
-                        foliation_dict[foliation.get("ObservationID")+"_a"] = foliation
-                        # dictionary to access with dip name
-                        foliation_dict[foliation.get("ObservationID")+"_d"] = foliation
-                        print foliation, foliation.get("ObservationID")
 
-                except TypeError:
-                    print "No foliation in the section"
-                try:
-                    coord_interface = self.get_point_coordinates(contact_points)
-                except TypeError:
-                    print "Element does not have iterable objects"
+                for foliation in foliations:
+                    # dictionary to access with azimth name
+                    foliation_dict[foliation.get("ObservationID")+"_a"] = foliation
+                    # dictionary to access with dip name
+                    foliation_dict[foliation.get("ObservationID")+"_d"] = foliation
+                    print foliation, foliation.get("ObservationID")
+                coord_interface = self.get_point_coordinates(contact_points)
 
                 print "\nDictionaries:\n ", contact_points_dict, "\n", foliation_dict
 
                 print "\n Contact points", contact_points, "\n", coord_interface, "\n"
 
                 print "foliations" , foliations,  "\n"
-                try:
-                    for i in range(len(foliations)):
-                        print "azimut:",self.get_foliation_azimuth(foliations[i])
-                        print "dip",self.get_foliation_dip(foliations[i])
-                        print "coordinates", self.get_foliation_coordinates(foliations[i])
-                except TypeError:
-                    print "No foliation in the section"
+                for i in range(len(foliations)):
+                    print "azimut:",self.get_foliation_azimuth(foliations[i])
+                    print "dip",self.get_foliation_dip(foliations[i])
+                    print "coordinates", self.get_foliation_coordinates(foliations[i])
             return None
         #========================
         # change the stuff
@@ -630,33 +618,24 @@ class GeomodellerClass:
         #Creation of dictionaries according to the ObservationID
         for i in range(len(section_dict)):
             # Contact points:
-            try:
-                contact_points = self.get_formation_point_data(section_dict.values()[i])
-                for contact_point in contact_points:
-                    contact_points_dict[contact_point.get("ObservationID")] = contact_point
-            except TypeError:
-                continue
+            contact_points = self.get_formation_point_data(section_dict.values()[i])
+            for contact_point in contact_points:
+                contact_points_dict[contact_point.get("ObservationID")] = contact_point
+
             # Foliation Points
-            try:
-                foliations = self.get_foliations(section_dict.values()[i])
-                for foliation in foliations:
-                    # dictionary to access with azimth name
-                    foliation_dict[foliation.get("ObservationID")+"_a"] = foliation
-                    # dictionary to access with dip name
-                    foliation_dict[foliation.get("ObservationID")+"_d"] = foliation
-            except TypeError:
-                continue
+            foliations = self.get_foliations(section_dict.values()[i])
+            for foliation in foliations:
+                # dictionary to access with azimth name
+                foliation_dict[foliation.get("ObservationID")+"_a"] = foliation
+                # dictionary to access with dip name
+                foliation_dict[foliation.get("ObservationID")+"_d"] = foliation
 
         # Passing our chain values:
             # Contact_points
         if args.has_key("contact_points_mc"):
             for contac_point_mc in args["contact_points_mc"]:
                 try:
-                    #self.change_formation_point_pos(contact_points_dict[str(contac_point_mc)], y_coord = contac_point_mc.value)
-
-                    # Philipp_ case: Giving the ID and the coordinates
-                    self.change_formation_point_pos(contact_points_dict[str(contac_point_mc[1])], x_coord = contac_point_mc[2],
-                     y_coord = contac_point_mc[3])
+                    self.change_formation_point_pos(contact_points_dict[str(contac_point_mc)], y_coord = contac_point_mc.value)
                 except KeyError:
                     print "The name of your PyMC variables (%s) does not agree with the ObservationID in the xml. Check misspellings." % str(contac_point_mc)
                     continue

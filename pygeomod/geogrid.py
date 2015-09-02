@@ -453,7 +453,7 @@ class GeoGrid():
 
         nm.write_history(history)
 
-    def analyse_geophysics(self, **kwds):
+    def analyse_geophysics(self, densities, **kwds):
         """Simulate potential-fields and use for model analysis
 
         It is possible to directly define filter for processing of gravity
@@ -505,12 +505,13 @@ class GeoGrid():
         #===================================================================
         # # set densities and magnetic susceptibilities
         #===================================================================
-        densities = {0: 0.1,
-                     1: 2610.,
-                     2: 2920.,
-                     3: 3100.,
-                     4: 2920.,
-                     5: 2610.}
+        #densities = dens
+            #densities = {0: 0.1,
+            #       1: 2610,
+            #       2: 2920,
+            #       3: 3100,
+            #       4: 2920,
+            #       5: 2610}
         sus = {0: 0.001,
                1: 0.001,
                2: 0.001,
@@ -718,10 +719,10 @@ class GeoGrid():
             aspect = self.extent_z/self.extent_x * ve
             if geomod_coord:
 
-                ax.set_xticks(np.linspace(0,self.ny,6, endpoint = True, dtype = int))
-                ax.set_yticks(np.linspace(0,self.nz,6, endpoint = True, dtype = int))
-                ax.set_xticklabels(np.linspace(self.ymin,self.ymax,6,dtype = int, endpoint = True ))
-                ax.set_yticklabels(np.linspace(self.zmin,self.zmax,6,dtype = int, endpoint = True ))
+                ax.set_xticks(np.linspace(0,self.ny,6, endpoint = False, dtype = int))
+                ax.set_yticks(np.linspace(0,self.nz,6, endpoint = False, dtype = int))
+                ax.set_xticklabels(np.linspace(self.ymin,self.ymax,6,dtype = int, endpoint = False ))
+                ax.set_yticklabels(np.linspace(self.zmin,self.zmax,6,dtype = int, endpoint = faults_parent ))
 
 
                 ax.set_ylabel("z[m]")
@@ -751,10 +752,10 @@ class GeoGrid():
             if geomod_coord:
                 #print np.linspace(0,self.extent_x,11), np.linspace(0,self.extent_x,11, endpoint = True)
 
-                ax.set_xticks(np.linspace(0,self.nx,6, endpoint = True, dtype = int))
-                ax.set_yticks(np.linspace(0,self.nz,6, endpoint = True, dtype = int))
-                ax.set_xticklabels(np.linspace(self.xmin,self.xmax,6, endpoint = True, dtype = int))
-                ax.set_yticklabels(np.linspace(self.zmin,self.zmax,6,dtype = int,endpoint = True ))
+                ax.set_xticks(np.linspace(0,self.nx,6, endpoint = False, dtype = int))
+                ax.set_yticks(np.linspace(0,self.nz,6, endpoint = False, dtype = int))
+                ax.set_xticklabels(np.linspace(self.xmin,self.xmax,6, endpoint = False, dtype = int))
+                ax.set_yticklabels(np.linspace(self.zmin,self.zmax,6,dtype = int,endpoint = False ))
                 #ax.invert_yaxis
                 ax.set_ylabel("z[m]")
                 ax.set_xlabel("x[m]")
@@ -784,10 +785,10 @@ class GeoGrid():
             if geomod_coord:
                 print 3
                 print self.xmin, self.xmax, self.ymin, self.ymax, self.zmin, self.zmax
-                print np.linspace(self.xmin,self.xmax,6, endpoint = True, dtype = int)
-                print np.linspace(0,self.extent_y,6, endpoint = True, dtype = int)
+                print np.linspace(self.xmin,self.xmax,6, endpoint = False, dtype = int)
+                print np.linspace(0,self.extent_y,6, endpoint = False, dtype = int)
                 ax.set_xticks(np.linspace(0,self.nx,6,dtype = int ))
-                ax.set_yticks(np.linspace(0,self.ny,6, endpoint = True, dtype = int))
+                ax.set_yticks(np.linspace(0,self.ny,6, endpoint = False, dtype = int))
                 ax.set_xticklabels(np.linspace(self.xmin,self.xmax,6,dtype = int ))
                 ax.set_yticklabels(np.linspace(self.ymin,self.ymax,6,dtype = int ))
                 ax.set_ylabel("y[m]")
@@ -880,7 +881,8 @@ class GeoGrid():
         """
         grid = kwds.get("grid", self.grid)
         var_name = kwds.get("var_name", "Geology")
-        from evtk.hl import gridToVTK
+        #from evtk.hl import gridToVTK
+        from pyevtk.hl import gridToVTK
         # define coordinates
         x = np.zeros(self.nx + 1)
         y = np.zeros(self.ny + 1)
