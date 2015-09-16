@@ -5,7 +5,8 @@ Created on 21/03/2014
 @author: Florian Wellmann (some parts originally developed by Erik Schaeffer)
 '''
 import numpy as np
-
+import pynoddy
+import subprocess
 import os.path
 import platform
 
@@ -283,24 +284,27 @@ class GeoGrid():
         ids = []
         # check if cell centers are defined - if not, do so!
         if not hasattr(self, 'cell_centers_x'):
-            self.determine_cell_centers()
-            for k in range(self.nz):
-                for j in range(self.ny):
-                    for i in range(self.nx):
-                        cell_position.append(self.cell_centers_x[i])
-                        cell_position.append(self.cell_centers_y[j])
-                        cell_position.append(self.cell_centers_z[k])
-                        ids.append((i,j,k))
+            if cell_position == []:
+                self.determine_cell_centers()
+                for k in range(self.nz):
+                    for j in range(self.ny):
+                        for i in range(self.nx):
+                            cell_position.append(self.cell_centers_x[i])
+                            cell_position.append(self.cell_centers_y[j])
+                            cell_position.append(self.cell_centers_z[k])
+                            ids.append((i,j,k))
 
         # prepare variables for cpp function
+        #print cell_position
         coord_ctypes = (ctypes.c_double * len(cell_position))(*cell_position)
+
         coord_len = len(cell_position)
         # call cpp function
                     #Detection of operative system:
         if platform.system() == "Linux":
             lib = ctypes.CDLL('./libgeomod.so') #linux
         elif platform.system() == "Windows":
-            lib = ctypes.windll.LoadLibrary(os.path.dirname(os.path.abspath(__file__)) + os.path.sep +"libgeomodwin1.dll") #windows
+            lib = ctypes.windll.LoadLibrary(os.path.dirname(os.path.abspath(__file__)) + os.path.sep +"libgeomodWin1.2.dll") #windows
         else:
             print("Your operative system is not supported")
         #print coord_len
@@ -308,7 +312,7 @@ class GeoGrid():
         # This is the function wich needs GPU!!!
         formations_raw = lib.compute_irregular_grid(filename_ctypes, coord_ctypes, coord_len)
         # re-sort formations into array
-    #    print formations_raw
+        #    print formations_raw
         for i in range(len(formations_raw)):
             self.grid[ids[i][0],ids[i][1],ids[i][2]] = formations_raw[i]
 
@@ -347,21 +351,21 @@ class GeoGrid():
         f_g12 = open(self.basename + ".g12", 'w')
         f_g01 = open(self.basename + ".g00", 'w')
         # method = 'numpy'    # using numpy should be faster - but it messes up the order... possible to fix?
-#         if method == 'standard':
-#             i = 0
-#             j = 0
-#             k = 0
-#             self.block = np.ndarray((self.nx,self.ny,self.nz))
-#             for line in f.readlines():
-#                 if line == '\n':
-#                     # next z-slice
-#                     k += 1
-#                     # reset x counter
-#                     i = 0
-#                     continue
-#                 l = [int(l1) for l1 in line.strip().split("\t")]
-#                 self.block[i,:,self.nz-k-1] = np.array(l)[::-1]
-#                 i += 1
+        #         if method == 'standard':
+        #             i = 0
+        #             j = 0
+        #             k = 0
+        #             self.block = np.ndarray((self.nx,self.ny,self.nz))
+        #             for line in f.readlines():
+        #                 if line == '\n':
+        #                     # next z-slice
+        #                     k += 1
+        #                     # reset x counter
+        #                     i = 0
+        #                     continue
+        #                 l = [int(l1) for l1 in line.strip().split("\t")]
+        #                 self.block[i,:,self.nz-k-1] = np.array(l)[::-1]
+        #                 i += 1
 
         if not hasattr(self, "unit_ids"):
             self.determine_geology_ids()
@@ -370,7 +374,7 @@ class GeoGrid():
         # # create file with base settings (.g00)
         #=======================================================================
         f_g01.write("VERSION = 7.11\n")
-        f_g01.write("FILE PREFIX = " + self.basename + "\n")
+        f_g01.write("FILE PREFIX = " + self.basename + "\r\n")
         import time
         t = time.localtime() # get current time
         f_g01.write("DATE = %d/%d/%d\n" % (t.tm_mday, t.tm_mon, t.tm_year))
@@ -391,14 +395,14 @@ class GeoGrid():
             f_g01.write("\tCUBE SIZE FOR LAYER %d = %d\n" % (k, self.delx[0]))
         f_g01.write("CALCULATION RANGE = %d\n" % (self.gps_range / self.delx[0]))
         f_g01.write("""INCLINATION OF EARTH MAG FIELD = -67.00
-INTENSITY OF EARTH MAG FIELD = 63000.00
-DECLINATION OF VOL. WRT. MAG NORTH = 0.00
-DENSITY CALCULATED = Yes
-SUSCEPTIBILITY CALCULATED = Yes
-REMANENCE CALCULATED = No
-ANISOTROPY CALCULATED = No
-INDEXED DATA FORMAT = Yes
-""")
+        INTENSITY OF EARTH MAG FIELD = 63000.00
+        DECLINATION OF VOL. WRT. MAG NORTH = 0.00
+        DENSITY CALCULATED = Yes
+        SUSCEPTIBILITY CALCULATED = Yes
+        REMANENCE CALCULATED = No
+        ANISOTROPY CALCULATED = No
+        INDEXED DATA FORMAT = Yes
+        """)
         f_g01.write("NUM ROCK TYPES = %d\n" % len(self.unit_ids))
         for i in self.unit_ids:
             f_g01.write("ROCK DEFINITION Layer %d = %d\n" % (i, i))
@@ -412,14 +416,14 @@ INDEXED DATA FORMAT = Yes
         # write geology blocks to file
         for k in range(self.nz):
             # this worked for geophysics, but not for re-import with pynoddy:
-#             for val in self.grid[:,:,k].ravel(order = 'A'):
-#                 f_g12.write("%d\t" % val)
+            #             for val in self.grid[:,:,k].ravel(order = 'A'):
+            #                 f_g12.write("%d\t" % val)
             for i in range(self.nx):
                 for val in self.grid[i,:,k]:
                     f_g12.write("%d\t" % val)
-                f_g12.write("\n")
+                f_g12.write("\r\n")
             # f_g12.write(['%d\t' % i for i in self.grid[:,:,k].ravel()])
-            f_g12.write("\n")
+            f_g12.write("\r\n")
 
         f_g12.close()
         f_g01.close()
@@ -429,7 +433,8 @@ INDEXED DATA FORMAT = Yes
         #=======================================================================
         import pynoddy.history
         history = self.basename + "_base.his"
-        nm = pynoddy.history.NoddyHistory()
+        nm = pynoddy.history.NoddyHistory('simple_two_faults.his')
+        #print nm
         # add stratigraphy
         # create dummy names and layers for base stratigraphy
         layer_names = []
@@ -440,7 +445,7 @@ INDEXED DATA FORMAT = Yes
         strati_options = {'num_layers' : len(self.unit_ids),
                           'layer_names' : layer_names,
                           'layer_thickness' : layer_thicknesses}
-        nm.add_event('stratigraphy', strati_options)
+        nm.add_event('stratigraphy', strati_options, )
 
         # set grid origin and extent:
         nm.set_origin(self.xmin, self.ymin, self.zmin)
@@ -448,8 +453,156 @@ INDEXED DATA FORMAT = Yes
 
         nm.write_history(history)
 
+    def analyse_geophysics(self, densities, **kwds):
+        """Simulate potential-fields and use for model analysis
+
+        It is possible to directly define filter for processing of gravity
+
+        **Arguments**:
+            - *model_dir*: directory containing sub-directories with uncertainty runs
+                        (uncertainty_run_01, etc.);
+
+        **Optional keywords**:
+            - *grav_min* = float : reject models with a grav value lower than this
+            - *grav_max* = float : reject models with a grav value larger than this
+        """
+        #os.chdir(model_dir)
+        all_gravs = []
+        all_gravs_filtered = []
+        all_mags = []
+        all_mags_filtered = []
+        all_probs = {}
+        all_probs_filtered = {}
+        i_all = 0
+        i_filtered = 0
+        used_grids = []
+        used_grids_filtered = []
+        f = self
+        #for f in os.listdir(model_dir):
+        #    if os.path.splitext(f)[1] == ".pkl" and "Sandstone" in f:
+        #===================================================================
+        # Load grid
+        #===================================================================
+        #    grid_file = open(os.path.join(model_dir, f), "r")
+        #    grid_ori = pickle.load(grid_file)
+        #    grid_file.close()
+        #===================================================================
+        # Extract subgrid
+        #===================================================================
+        #    subrange = (40,200,30,250,0,80)
+        grid = self
+            # grid = grid_ori
+        # substitute 0 with something else in grid ids
+        tmp_grid = np.zeros_like(grid.grid)
+        tmp_grid[grid.grid == 0] += 1
+        #print tmp_grid.shape
+    #    grid.set_basename(self.split(".")[0])
+    #    print "Basename"
+    #    print grid.basename
+        grid.grid += tmp_grid
+        #             n_cells = np.prod(grid.grid.shape)
+        grid.determine_geology_ids()
+        #===================================================================
+        # # set densities and magnetic susceptibilities
+        #===================================================================
+        #densities = dens
+            #densities = {0: 0.1,
+            #       1: 2610,
+            #       2: 2920,
+            #       3: 3100,
+            #       4: 2920,
+            #       5: 2610}
+        sus = {0: 0.001,
+               1: 0.001,
+               2: 0.001,
+               3: 0.1,
+               4: 0.001,
+               5: 0.001}
+        grid.set_densities(densities)
+        grid.set_sus(sus)
+    #    print grid
+        grid.write_noddy_files(gps_range = 0.0)
+    #    print grid.unit_ids
+        sim_type = "ANOM_FROM_BLOCK"
+        history = grid.basename + "_base.his"
+        output_name = grid.basename
+        #import pdb
+        #pdb.set_trace()
+
+        # save grid as vtk for testing:
+        # grid_ori.export_to_vtk(vtk_filename = grid.basename)
+        #===================================================================
+        # Run gravity forward modeling
+        #===================================================================
+        out =  subprocess.Popen(['noddy.exe', history, output_name, sim_type],
+                    shell=True, stderr=subprocess.PIPE,
+                    stdout=subprocess.PIPE).stdout.read()
+
+        #===================================================================
+        # Initiate probability grids
+        #===================================================================
+        if i_all == 0:
+            vals = grid.unit_ids
+            for val in vals:
+                if not all_probs.has_key(val):
+                    all_probs[val] = np.zeros_like(grid.grid, dtype = "float")
+                    all_probs_filtered[val] = np.zeros_like(grid.grid, dtype = "float")
+
+        #===================================================================
+        # Create plot and store data
+        #===================================================================
+        self.geophys = pynoddy.output.NoddyGeophysics(grid.basename)
+        #return geophys
+        """
+            #=================================================
+            #             Check gravity constraints
+            #=================================================
+        filter_val = True
+        if kwds.has_key("grav_max"):
+            if np.max(geophys.grv_data) > kwds['grav_max']:
+                filter_val = False
+        if kwds.has_key("grav_min"):
+            if np.min(geophys.grv_data) < kwds['grav_min']:
+                filter_val = False
+        if filter_val:
+            all_gravs_filtered.append(geophys.grv_data)
+            all_mags_filtered.append(geophys.mag_data)
+            used_grids_filtered.append("%s/%s" % (model_dir, grid.basename))
+            #                 test_grid = np.zeros_like(grid.grid)
+            for val in vals:
+                all_probs_filtered[val] += (grid.grid == val)
+                #                     test_grid += grid.grid == val
+            # check probability
+            #                 assert(np.sum(test_grid) == n_cells)
+            i_filtered += 1
+        all_gravs.append(geophys.grv_data)
+        all_mags.append(geophys.mag_data)
+        used_grids.append("%s/%s" % (model_dir, grid.basename))
+        #             test_grid = np.zeros_like(grid.grid)
+        for val in vals:
+            all_probs[val] += (grid.grid == val)
+            #                 test_grid += grid.grid == val
+            #             assert(np.sum(test_grid) == n_cells)
+        i_all += 1
+
+        #===================================================================
+        # Export to vtk for test
+        #===================================================================
+        #             grid_out = pynoddy.output.NoddyOutput(grid.basename)
+        #             grid_out.export_to_vtk(vtk_filename = grid.basename)
 
 
+        #=======================================================================
+        # Analyse statistics for all simulated grids
+        #=======================================================================
+        # all_gravs = np.array(all_gravs)
+        return all_gravs, all_mags, used_grids, all_probs, i_all,\
+               all_gravs_filtered, all_mags_filtered, used_grids_filtered, all_probs_filtered, i_filtered
+        #     f_all = open("all_gravs.pkl", 'w')
+        #     pickle.dump(all_gravs, f_all)
+        #     f_all.close()
+        #     return all_gravs
+        """
 
 
     def set_dimensions(self, **kwds):
@@ -529,7 +682,6 @@ INDEXED DATA FORMAT = Yes
         """
         # TO DO:
         # - Colorbar in contourplots
-    #    print 1
         colorbar = kwds.get('colorbar', True)
         cmap = kwds.get('cmap', 'jet')
         alpha = kwds.get('alpha', 1)
@@ -538,6 +690,8 @@ INDEXED DATA FORMAT = Yes
         figsize = kwds.get('figsize', (8,4))
         geomod_coord =  kwds.get('geomod_coord', False)
         contour = kwds.get('contour', False)
+        linewidth = kwds.get("linewidth", 1)
+
 
         if not kwds.has_key('ax'):
             colorbar = kwds.get('colorbar', True)
@@ -565,10 +719,10 @@ INDEXED DATA FORMAT = Yes
             aspect = self.extent_z/self.extent_x * ve
             if geomod_coord:
 
-                ax.set_xticks(np.linspace(0,self.ny,6, endpoint = True, dtype = int))
-                ax.set_yticks(np.linspace(0,self.nz,6, endpoint = True, dtype = int))
-                ax.set_xticklabels(np.linspace(self.ymin,self.ymax,6,dtype = int, endpoint = True ))
-                ax.set_yticklabels(np.linspace(self.zmin,self.zmax,6,dtype = int, endpoint = True ))
+                ax.set_xticks(np.linspace(0,self.ny,6, endpoint = False, dtype = int))
+                ax.set_yticks(np.linspace(0,self.nz,6, endpoint = False, dtype = int))
+                ax.set_xticklabels(np.linspace(self.ymin,self.ymax,6,dtype = int, endpoint = False ))
+                ax.set_yticklabels(np.linspace(self.zmin,self.zmax,6,dtype = int, endpoint = faults_parent ))
 
 
                 ax.set_ylabel("z[m]")
@@ -598,10 +752,10 @@ INDEXED DATA FORMAT = Yes
             if geomod_coord:
                 #print np.linspace(0,self.extent_x,11), np.linspace(0,self.extent_x,11, endpoint = True)
 
-                ax.set_xticks(np.linspace(0,self.nx,6, endpoint = True, dtype = int))
-                ax.set_yticks(np.linspace(0,self.nz,6, endpoint = True, dtype = int))
-                ax.set_xticklabels(np.linspace(self.xmin,self.xmax,6, endpoint = True, dtype = int))
-                ax.set_yticklabels(np.linspace(self.zmin,self.zmax,6,dtype = int,endpoint = True ))
+                ax.set_xticks(np.linspace(0,self.nx,6, endpoint = False, dtype = int))
+                ax.set_yticks(np.linspace(0,self.nz,6, endpoint = False, dtype = int))
+                ax.set_xticklabels(np.linspace(self.xmin,self.xmax,6, endpoint = False, dtype = int))
+                ax.set_yticklabels(np.linspace(self.zmin,self.zmax,6,dtype = int,endpoint = False ))
                 #ax.invert_yaxis
                 ax.set_ylabel("z[m]")
                 ax.set_xlabel("x[m]")
@@ -631,10 +785,10 @@ INDEXED DATA FORMAT = Yes
             if geomod_coord:
                 print 3
                 print self.xmin, self.xmax, self.ymin, self.ymax, self.zmin, self.zmax
-                print np.linspace(self.xmin,self.xmax,6, endpoint = True, dtype = int)
-                print np.linspace(0,self.extent_y,6, endpoint = True, dtype = int)
+                print np.linspace(self.xmin,self.xmax,6, endpoint = False, dtype = int)
+                print np.linspace(0,self.extent_y,6, endpoint = False, dtype = int)
                 ax.set_xticks(np.linspace(0,self.nx,6,dtype = int ))
-                ax.set_yticks(np.linspace(0,self.ny,6, endpoint = True, dtype = int))
+                ax.set_yticks(np.linspace(0,self.ny,6, endpoint = False, dtype = int))
                 ax.set_xticklabels(np.linspace(self.xmin,self.xmax,6,dtype = int ))
                 ax.set_yticklabels(np.linspace(self.ymin,self.ymax,6,dtype = int ))
                 ax.set_ylabel("y[m]")
@@ -660,7 +814,8 @@ INDEXED DATA FORMAT = Yes
         if contour:
             Rx, Ry = np.meshgrid(rx, ry)
             #print np.amax(grid_slice)
-            im = ax.contour(Rx, Ry, grid_slice, int(np.amax(grid_slice)+1), interpolation='nearest', cmap = cmap, alpha = alpha)
+            im = ax.contour(Rx, Ry, grid_slice, int(np.amax(grid_slice)+1),
+                interpolation='nearest', cmap = cmap, alpha = alpha, linewidth = linewidth)
 
 
         else:
@@ -671,26 +826,26 @@ INDEXED DATA FORMAT = Yes
                       vmax = vmax,
                       aspect = aspect)
         if colorbar:
-#            divider = mpl_toolkits.axes_grid1.make_axes_locatable(ax)
-#            cax = divider.append_axes("bottom", size="5%", pad=0.2)
+       #            divider = mpl_toolkits.axes_grid1.make_axes_locatable(ax)
+       #            cax = divider.append_axes("bottom", size="5%", pad=0.2)
             cbar1 = fig.colorbar(im, orientation="horizontal")
             ticks = np.arange(vmin, vmax+0.1, int(np.log2(vmax-vmin)/1.2), dtype='int')
             cbar1.set_ticks(ticks)
-    #         cbar1.set_ticks(self.unit_ids[::int(np.log2(len(self.unit_ids)/2))])
+         #         cbar1.set_ticks(self.unit_ids[::int(np.log2(len(self.unit_ids)/2))])
             cbar1.set_label("Geology ID")
-    #         cax.xaxis.set_major_formatter(FormatStrFormatter("%d"))
+        #         cax.xaxis.set_major_formatter(FormatStrFormatter("%d"))
         # Setting labels
         #ax.set_xlabel("X[m]")
         #ax.set_ylabel("y[m]")
         #ax.set_zlabel("z[m]")
 
             # Plotting geomodeller coordinates instead voxels
-    #    if geomod_coord:
-    #        print "we are here"
-    #        #xticks = np.linspace(0,self.extent_x,11)
-            #ax.set_xticks(xticks)
-            #print xticks
-    #        ax.set_xticklabels(np.round(np.linspace(0,self.extent_x,11),0)); # use LaTeX formatted labels
+        #    if geomod_coord:
+        #        print "we are here"
+        #        #xticks = np.linspace(0,self.extent_x,11)
+                #ax.set_xticks(xticks)
+                #print xticks
+        #        ax.set_xticklabels(np.round(np.linspace(0,self.extent_x,11),0)); # use LaTeX formatted labels
 
         if kwds.has_key("ax"):
             # return image and do not show
@@ -700,7 +855,7 @@ INDEXED DATA FORMAT = Yes
             # save to file
             filename = kwds.get("fig_filename", "grid_section_direction_%s_pos_%d.png" %
                                 (direction, cell_pos))
-            plt.savefig(filename)
+            plt.savefig(filename, transparent = True)
 
         else:
 
@@ -726,7 +881,8 @@ INDEXED DATA FORMAT = Yes
         """
         grid = kwds.get("grid", self.grid)
         var_name = kwds.get("var_name", "Geology")
-        from evtk.hl import gridToVTK
+        #from evtk.hl import gridToVTK
+        from pyevtk.hl import gridToVTK
         # define coordinates
         x = np.zeros(self.nx + 1)
         y = np.zeros(self.ny + 1)
