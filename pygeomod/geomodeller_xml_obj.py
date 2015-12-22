@@ -573,7 +573,10 @@ class GeomodellerClass:
         return point_list
 
     def change_formation_values_PyMC(self, **args):
+        """ -So far is ready only to changes points in coordinates y. It is not difficult to add a new
+        dimension
 
+            - The dips and azimuth ObservationID must contain _d or _a respectively"""
 
         if args.has_key("info"):
             section_dict = self.create_sections_dict()
@@ -652,11 +655,21 @@ class GeomodellerClass:
         if args.has_key("contact_points_mc"):
             for contac_point_mc in args["contact_points_mc"]:
                 try:
-                    #self.change_formation_point_pos(contact_points_dict[str(contac_point_mc)], y_coord = contac_point_mc.value)
 
-                    # Philipp_ case: Giving the ID and the coordinates
-                    self.change_formation_point_pos(contact_points_dict[str(contac_point_mc[1])], x_coord = contac_point_mc[2],
-                     y_coord = contac_point_mc[3])
+                    element = contact_points_dict[str(contac_point_mc)]
+                    element_point = element.find("{"+self.gml+"}LineString")
+                    element_coords = element_point.find("{"+self.gml+"}coordinates")
+                    point_list = element_coords.text.split(" ")
+                    if point_list[-1] == '':
+                        point_list = point_list[0:-1]
+
+                    if len(point_list) == 1:
+                        self.change_formation_point_pos(element, y_coord = contac_point_mc.value)
+                    #Specific case of the Graben:
+                    elif len(point_list) == 2:
+                        self.change_formation_point_pos(element, y_coord = [contac_point_mc.value, contac_point_mc.value])
+                    else:
+                        print "The lenght of the points to change does not fit with the number of changes in the input (>2)"
                 except KeyError:
                     print "The name of your PyMC variables (%s) does not agree with the ObservationID in the xml. Check misspellings." % str(contac_point_mc)
                     continue

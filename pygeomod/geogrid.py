@@ -149,7 +149,7 @@ class GeoGrid():
         if platform.system() == "Linux":
             lib = ctypes.CDLL('./libgeomod.so') #linux
         elif platform.system() == "Windows":
-            lib = ctypes.windll.LoadLibrary(os.path.dirname(os.path.abspath(__file__)) + os.path.sep +"libgeomodwin1.dll")     #windows
+            lib = ctypes.windll.LoadLibrary(os.path.dirname(os.path.abspath(__file__)) + os.path.sep +"libgeomodwin.dll")     #windows
         else:
             print("Your operative system is not supported")
         lib.get_model_bounds.restype = ndpointer(dtype=ctypes.c_int, shape=(6,))
@@ -671,6 +671,7 @@ class GeoGrid():
             - *colorbar* = bool: attach colorbar (default: True)
             - *geomod_coord* = bool:  Plotting geomodeller coordinates instead voxels (default: False)
             - *contour* = bool : Plotting contour of the layers contact
+            - *plot layer* = array: Layer Number you want to plot in the contour plot
             - *rescale* = bool: rescale color bar to range of visible slice (default: False)
             - *ve* = float : vertical exageration (for plots in x,y-direction)
             - *figsize* = (x,y) : figsize settings for plot
@@ -691,7 +692,7 @@ class GeoGrid():
         geomod_coord =  kwds.get('geomod_coord', False)
         contour = kwds.get('contour', False)
         linewidth = kwds.get("linewidth", 1)
-
+        levels = kwds.get("plot_layer", None)
 
         if not kwds.has_key('ax'):
             colorbar = kwds.get('colorbar', True)
@@ -719,10 +720,10 @@ class GeoGrid():
             aspect = self.extent_z/self.extent_x * ve
             if geomod_coord:
 
-                ax.set_xticks(np.linspace(0,self.ny,6, endpoint = False, dtype = int))
-                ax.set_yticks(np.linspace(0,self.nz,6, endpoint = False, dtype = int))
-                ax.set_xticklabels(np.linspace(self.ymin,self.ymax,6,dtype = int, endpoint = False ))
-                ax.set_yticklabels(np.linspace(self.zmin,self.zmax,6,dtype = int, endpoint = faults_parent ))
+                ax.set_xticks(np.linspace(0,self.ny-1,6, endpoint = True, dtype = int))
+                ax.set_yticks(np.linspace(0,self.nz-1,6, endpoint = True, dtype = int))
+                ax.set_xticklabels(np.linspace(self.ymin,self.ymax,6,dtype = int, endpoint = True ))
+                ax.set_yticklabels(np.linspace(self.zmin,self.zmax,6,dtype = int, endpoint = True ))
 
 
                 ax.set_ylabel("z[m]")
@@ -752,10 +753,13 @@ class GeoGrid():
             if geomod_coord:
                 #print np.linspace(0,self.extent_x,11), np.linspace(0,self.extent_x,11, endpoint = True)
 
-                ax.set_xticks(np.linspace(0,self.nx,6, endpoint = False, dtype = int))
-                ax.set_yticks(np.linspace(0,self.nz,6, endpoint = False, dtype = int))
-                ax.set_xticklabels(np.linspace(self.xmin,self.xmax,6, endpoint = False, dtype = int))
-                ax.set_yticklabels(np.linspace(self.zmin,self.zmax,6,dtype = int,endpoint = False ))
+
+
+                ax.set_xticks(np.linspace(0,self.nx-1,6, endpoint = True, dtype = int))
+                ax.set_yticks(np.linspace(0,self.nz-1,6, endpoint = True, dtype = int))
+
+                ax.set_xticklabels(np.linspace(self.xmin,self.xmax,6, endpoint = True, dtype = int))
+                ax.set_yticklabels(np.linspace(self.zmin,self.zmax,6, dtype = int,endpoint = True ))
                 #ax.invert_yaxis
                 ax.set_ylabel("z[m]")
                 ax.set_xlabel("x[m]")
@@ -768,7 +772,7 @@ class GeoGrid():
                 rx = np.arange(self.nx)
 
         elif direction == 'z' :
-            print 2
+
             if type(cell_pos) == str:
                 # decipher cell position
                 if cell_pos == 'center' or cell_pos == 'centre':
@@ -783,14 +787,14 @@ class GeoGrid():
             aspect = 1.
             # setting labels
             if geomod_coord:
-                print 3
-                print self.xmin, self.xmax, self.ymin, self.ymax, self.zmin, self.zmax
-                print np.linspace(self.xmin,self.xmax,6, endpoint = False, dtype = int)
-                print np.linspace(0,self.extent_y,6, endpoint = False, dtype = int)
-                ax.set_xticks(np.linspace(0,self.nx,6,dtype = int ))
-                ax.set_yticks(np.linspace(0,self.ny,6, endpoint = False, dtype = int))
-                ax.set_xticklabels(np.linspace(self.xmin,self.xmax,6,dtype = int ))
-                ax.set_yticklabels(np.linspace(self.ymin,self.ymax,6,dtype = int ))
+
+            #    print self.xmin, self.xmax, self.ymin, self.ymax, self.zmin, self.zmax
+            #    print np.linspace(self.xmin,self.xmax,6, endpoint = False, dtype = int)
+            #    print np.linspace(0,self.extent_y,6, endpoint = False, dtype = int)
+                ax.set_xticks(np.linspace(0,self.nx-1,6,dtype = int, endpoint = True ))
+                ax.set_yticks(np.linspace(0,self.ny-1,6, endpoint = True, dtype = int))
+                ax.set_xticklabels(np.linspace(self.xmin,self.xmax,6,dtype = int, endpoint = True ))
+                ax.set_yticklabels(np.linspace(self.ymin,self.ymax,6,dtype = int, endpoint = True ))
                 ax.set_ylabel("y[m]")
                 ax.set_xlabel("x[m]")
             else:
@@ -815,7 +819,8 @@ class GeoGrid():
             Rx, Ry = np.meshgrid(rx, ry)
             #print np.amax(grid_slice)
             im = ax.contour(Rx, Ry, grid_slice, int(np.amax(grid_slice)+1),
-                interpolation='nearest', cmap = cmap, alpha = alpha, linewidth = linewidth)
+                interpolation='nearest', cmap = cmap, alpha = alpha, linewidths = linewidth,
+                 antialiased = True, levels = levels)
 
 
         else:
@@ -834,18 +839,6 @@ class GeoGrid():
          #         cbar1.set_ticks(self.unit_ids[::int(np.log2(len(self.unit_ids)/2))])
             cbar1.set_label("Geology ID")
         #         cax.xaxis.set_major_formatter(FormatStrFormatter("%d"))
-        # Setting labels
-        #ax.set_xlabel("X[m]")
-        #ax.set_ylabel("y[m]")
-        #ax.set_zlabel("z[m]")
-
-            # Plotting geomodeller coordinates instead voxels
-        #    if geomod_coord:
-        #        print "we are here"
-        #        #xticks = np.linspace(0,self.extent_x,11)
-                #ax.set_xticks(xticks)
-                #print xticks
-        #        ax.set_xticklabels(np.round(np.linspace(0,self.extent_x,11),0)); # use LaTeX formatted labels
 
         if kwds.has_key("ax"):
             # return image and do not show
@@ -882,6 +875,7 @@ class GeoGrid():
         grid = kwds.get("grid", self.grid)
         var_name = kwds.get("var_name", "Geology")
         #from evtk.hl import gridToVTK
+        import pyevtk
         from pyevtk.hl import gridToVTK
         # define coordinates
         x = np.zeros(self.nx + 1)
