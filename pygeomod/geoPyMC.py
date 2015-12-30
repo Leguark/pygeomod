@@ -55,15 +55,13 @@ class GeoPyMC_sim():
 
     def temp_creation(self,orig_dir,dest_dir = "temp/"):
         "Generates a working folder of the project"
-        try:
-            shutil.copytree(r'orig_dir', 'dest_dir/')
-        except WindowsError:
-            print "The folder is already created"
+
+        shutil.copytree(orig_dir, dest_dir)
 
         self.project_dir = dest_dir
 
     def proj_dir(self, proj_dir):
-        self.project_dir = proj_dir+'/'
+        self.project_dir = proj_dir+'\\'
 
     def read_excel(self, excl_dir, verbose = 0,  **kwds):
         "Reads data from an excel file"
@@ -124,6 +122,7 @@ class GeoPyMC_sim():
 
         # In case that every interface is represented by two points in order to give horizonality
         two_points = kwds.get('two_points', False)
+
         plot_direction = kwds.get("plot_direction", "x")
         plot_cell = kwds.get("plot_cell", resolution[0]/2)
 
@@ -139,18 +138,20 @@ class GeoPyMC_sim():
         # Load the xml to be modify
         org_xml = self.project_dir+xml_name
 
-        if verbose > 1:
-            print "Values original xml"
-            gmod_obj.change_formation_values_PyMC(contact_points_mc = self.contact_points_mc,
-                                                 azimuths_mc = self.azimuths_mc,
-                                                 dips_mc = self.dips_mc,
-                                                 info = True)
+
         #Create the instance to modify the xml
             # Loading stuff
 
         gmod_obj = gxml.GeomodellerClass()
         gmod_obj.load_geomodeller_file(org_xml)
 
+
+        if verbose > 1:
+            print "Values original xml"
+            gmod_obj.change_formation_values_PyMC(contact_points_mc = self.contact_points_mc,
+                                                 azimuths_mc = self.azimuths_mc,
+                                                 dips_mc = self.dips_mc,
+                                                 info = True)
            #============================================
             # Modifing the model
             #===========================================
@@ -164,10 +165,11 @@ class GeoPyMC_sim():
             #============================================
 
         # Write the new xml
-        gmod_obj.write_xml(self.project_dir+"temp_new.xml")
+
+        gmod_obj.write_xml('temp\\temp_new.xml')
 
         # Read the new xml
-        temp_xml = self.project_dir+"temp_new.xml"
+        temp_xml = "temp\\temp_new.xml"
         G1 = geogrid.GeoGrid()
 
         # Getting dimensions and definning grid
@@ -198,7 +200,7 @@ class GeoPyMC_sim():
 
             if noddy_geophy == True:
                 print "Gravity Froward plot"
-                plt.contourf(G1.geophys.grv_data)
+                plt.contourf(G1.geophys.grv_data, cmap = "jet")
                 plt.colorbar()
 
         if verbose > 1:
@@ -208,7 +210,7 @@ class GeoPyMC_sim():
                                                  dips_mc = self.dips_mc,
                                                  info = True)
 
-        self.model = G1
+        #self.model = G1
         return G1
 
     def creating_Bayes_model(self, constraints, verbose = 0):
@@ -248,6 +250,7 @@ class GeoPyMC_sim():
                 raise AttributeError("A resolution is required for type 'xyz' gravity import" )
             ori_grav = np.loadtxt(ori_grav_obj)
             self.ori_grav_grid = ori_grav[:,3].reshape((resolution[1],resolution[0]))
+
         if type == "grid":
             self.ori_grav_grid = ori_grav_obj
 
@@ -256,13 +259,16 @@ class GeoPyMC_sim():
 
         if verbose > 0:
             print "Gravity Contour plot"
+            plt.imshow(self.ori_grav_grid, origin = "lower left",
+            interpolation = 'nearest', cmap = 'jet')
+            """
             plt.contourf(self.ori_grav_grid, cmap = 'gray' , alpha = 1, figsize= (12,12))
             plt.colorbar()
-
-    def MCMC_obj(self, path = "database_temp/"):
+            """
+    def MCMC_obj(self, db_name, path = "database_temp\\"):
         if not os.path.exists(path):
             os.makedirs(path)
-        self.Sim_MCMC = pm.MCMC(self.pymc_model,  db= "hdf5" , dbname= path+self.model_name+".hdf5")
+        self.Sim_MCMC = pm.MCMC(self.pymc_model,  db= "hdf5" , dbname= path+db_name+".hdf5")
 
     def dot_plot(self, path= "images_temp/",model_name = "PyMC_model",format = "png", **kwds):
         if not os.path.exists(path):

@@ -181,7 +181,7 @@ class GeoGrid():
         if platform.system() == "Linux":
             lib = ctypes.CDLL('./libgeomod.so') #linux
         elif platform.system() == "Windows":
-            lib = ctypes.windll.LoadLibrary(os.path.dirname(os.path.abspath(__file__)) + os.path.sep +"libgeomodwin_op5.dll") #windows
+            lib = ctypes.windll.LoadLibrary(os.path.dirname(os.path.abspath(__file__)) + os.path.sep +"libgeomodwin.dll") #windows
         else:
             print("Your operative system is not supported")
 
@@ -304,7 +304,7 @@ class GeoGrid():
         if platform.system() == "Linux":
             lib = ctypes.CDLL('./libgeomod.so') #linux
         elif platform.system() == "Windows":
-            lib = ctypes.windll.LoadLibrary(os.path.dirname(os.path.abspath(__file__)) + os.path.sep +"libgeomodWin1.2.dll") #windows
+            lib = ctypes.windll.LoadLibrary(os.path.dirname(os.path.abspath(__file__)) + os.path.sep +"libgeomodWin.dll") #windows
         else:
             print("Your operative system is not supported")
         #print coord_len
