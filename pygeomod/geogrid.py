@@ -681,8 +681,10 @@ class GeoGrid():
             - *savefig* = bool : save figure to file (default: show)
             - *fig_filename* = string : filename to save figure
         """
-        # TO DO:
+        #TO DO:
+        # Fix colorbar max and min
         # - Colorbar in contourplots
+
         colorbar = kwds.get('colorbar', True)
         cmap = kwds.get('cmap', 'jet')
         alpha = kwds.get('alpha', 1)

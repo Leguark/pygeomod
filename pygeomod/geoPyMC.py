@@ -222,7 +222,7 @@ class GeoPyMC_sim():
 
         # Appending the rest
         for i in constraints:
-            parameters.append(i)
+            parameters = np.append(parameters, i)
 
         self.pymc_model = pm.Model(parameters)
 
@@ -487,7 +487,7 @@ class GeoPyMC_rep():
     # ==============================================================================
 
     def _select_trace(self,
-        forbbiden = ["adaptive","model","deviance", "likelihood", "e_sq", "constrain",
+        forbbiden = ["adaptive","model","deviance", "likelihood", "constrain",
         "Metropolis"] ):
         import copy
         # Init:
@@ -782,20 +782,24 @@ class GeoPyMC_rep():
                 plt.savefig(path+name+"_"+Stoch+format, transparent = True)
 
 class GeoPyMC_GeoMod_from_posterior(GeoPyMC_rep, GeoPyMC_sim):
-    def _init_(self, db_name, path = "database_temp/",
+    def __init__(self, db_name, path = "database_temp/",
         forbbiden = ["adaptive","model","deviance", "likelihood", "e_sq", "constrain",
         "Metropolis"]  ):
+        #self.LD =
         self.load_db(path, db_name, verbose = 1)
+        #self._plot_traces =
         self._select_trace(forbbiden = forbbiden)
 
     def recover_parameters(self, n_chains = None,  burn = 20., n_trace = 1000 ):
-        posteriors = {}
+        Posterior = {}
 
         n_values = np.linspace(len(self.LD.trace(self._plot_traces[0], chain = n_chains)[:])*burn/100,
-         len(self.LD.trace(self._plot_traces[0], chain = n_chains)[:])-1,n_trace)
+         len(self.LD.trace(self._plot_traces[0], chain = n_chains)[:])-1,n_trace,  dtype = int)
         b = []
         i = 0
         for i, Stoch in enumerate(self._plot_traces):
+            if Stoch == "SM_Atley" or Stoch == "BIF_Atley":
+                continue
             def logp(value):
                 return 0
             def random(Stoch = Stoch, i = i):
@@ -820,10 +824,13 @@ class GeoPyMC_GeoMod_from_posterior(GeoPyMC_rep, GeoPyMC_sim):
         self.contact_points_mc = []
         self.azimuths_mc = []
         self.dips_mc = []
+
         for pymc_obj in Posterior.iteritems():
-            if "ori_a" in pymc_obj[0]:
-                self.azimuths_mc = np.append(azimuths_mc, pymc_obj[1])
-            elif "ori_d" in pymc_obj[0]:
-                self.dips_mc = np.append(dips_mc, pymc_obj[1])
+            #print pymc_obj[0]
+            if "Ori" in pymc_obj[0] and "_a" in pymc_obj[0]:
+            #    print "iam ghere"
+                self.azimuths_mc = np.append(self.azimuths_mc, pymc_obj[1])
+            elif "Ori" in pymc_obj[0] and "_d" in pymc_obj[0]:
+                self.dips_mc = np.append(self.dips_mc, pymc_obj[1])
             else:
-                self.contact_points_mc = np.append(contact_points_mc, pymc_obj[1])
+                self.contact_points_mc = np.append(self.contact_points_mc, pymc_obj[1])
