@@ -5,6 +5,7 @@ Created on 02/12/2015
 
 @author: Miguel de la Varga
 '''
+
 import numpy as np
 # Geophysisc inversion
 import pynoddy
@@ -45,7 +46,10 @@ try:
     import matplotlib.pyplot as plt
 except ImportError:
     print("\n\n\tMatplotlib not installed - plotting functions will not work!\n\n\n")
-
+import colormaps as cmaps
+plt.register_cmap(name='viridis', cmap=cmaps.viridis)
+plt.register_cmap(name='magma', cmap=cmaps.magma)
+plt.set_cmap(cmaps.viridis)
 class GeoPyMC_sim():
     "Object Definition to perform Bayes Analysis"
 
@@ -125,6 +129,7 @@ class GeoPyMC_sim():
 
         plot_direction = kwds.get("plot_direction", "x")
         plot_cell = kwds.get("plot_cell", resolution[0]/2)
+        z_dim = kwds.get("z_dim", False)
 
         # IMPORTANT NOTE: To be sure that the point we want to change fit with the Observation ID, I use the distribution name that
         # in this case is in contact_points(parent values). Children values (contact_points_val) only have the number itself
@@ -173,8 +178,17 @@ class GeoPyMC_sim():
         G1 = geogrid.GeoGrid()
 
         # Getting dimensions and definning grid
+        if noddy_geophy == False:
+            G1.get_dimensions_from_geomodeller_xml_project(temp_xml)
 
-        G1.get_dimensions_from_geomodeller_xml_project(temp_xml)
+        else:
+            G1.xmin, G1.xmax   = np.min(self.ori_grav[:,0]), np.max(self.ori_grav[:,0])
+            G1.ymin, G1.ymax    = np.min(self.ori_grav[:,1]), np.max(self.ori_grav[:,1])
+            G1.zmin, G1.zmax    = z_dim[0], z_dim[1]
+
+            G1.extent_x = G1.xmax - G1.xmin
+            G1.extent_y = G1.ymax - G1.ymin
+            G1.extent_z = G1.zmax - G1.zmin
 
         # Resolution!
         nx = resolution[0]
@@ -198,9 +212,11 @@ class GeoPyMC_sim():
                               , alpha = 1, figsize= (50,6),interpolation= 'nearest' ,
                                ve = 1, geomod_coord= True, contour = False)
 
-            if noddy_geophy == True:
+            if noddy_geophy == "shit":
                 print "Gravity Froward plot"
-                plt.contourf(G1.geophys.grv_data, cmap = "jet")
+                plt.imshow(G1.geophys.grv_data, origin = "lower left",
+                interpolation = 'nearest', cmap = 'viridis')
+
                 plt.colorbar()
 
         if verbose > 1:
@@ -248,8 +264,8 @@ class GeoPyMC_sim():
         if type == "xyz":
             if resolution == False:
                 raise AttributeError("A resolution is required for type 'xyz' gravity import" )
-            ori_grav = np.loadtxt(ori_grav_obj)
-            self.ori_grav_grid = ori_grav[:,3].reshape((resolution[1],resolution[0]))
+            self.ori_grav = np.loadtxt(ori_grav_obj)
+            self.ori_grav_grid = self.ori_grav[:,3].reshape((resolution[1],resolution[0]))
 
         if type == "grid":
             self.ori_grav_grid = ori_grav_obj
@@ -356,7 +372,7 @@ class GeoPyMC_rep():
 
 
             if multiplots == False:
-                fig, axs = plt.subplots(1, 1, figsize=(6,6))
+                fig, axs = plt.subplots(1, 1, figsize=figsize)
 
                 self.GeoMod_samples[-1].plot_section(section, cell_pos= cell_pos
                  ,colorbar = colorbar, ax = axs, alpha = alpha, cmap = cmap,
@@ -369,7 +385,7 @@ class GeoPyMC_rep():
                 plt.tight_layout()
             if multiplots == True:
                 n_rows = int(n_plots/3)
-                fig, axs = plt.subplots(n_rows, 3, sharex=True, sharey=True, figsize = (6, 6))
+                fig, axs = plt.subplots(n_rows, 3, sharex=True, sharey=True, figsize = figsize)
 
                 n_value = np.linspace(0, len(self.GeoMod_samples)-1, n_plots, dtype = int)
 
@@ -418,15 +434,12 @@ class GeoPyMC_rep():
         with sns.axes_style(axes_style):
 
 
-
             if multiplots == False:
                 fig, ax = plt.subplots(1, 1, figsize=(13,13))
 
 
-                ax.contourf(self.GeoMod_samples[-1].geophys.grv_data, colorbar = colorbar,
-                ax = ax, alpha = alpha, cmap = cmap,
-                interpolation= 'nearest' ,ve = ve, geomod_coord= geomod_coord,
-                contour = contour, plot_layer = levels)
+                ax.imshow(self.GeoMod_samples[-1].geophys.grv_data, cmap = cmap, origin = "lower")
+
 
 
                 plt.title( "Gravity "+self.model_name,
@@ -441,10 +454,9 @@ class GeoPyMC_rep():
                 fig, axs = plt.subplots(n_rows, 3, sharex=True, sharey=True, figsize = (13, 13))
 
                 for i, g  in enumerate(self.GeoMod_samples[n_value]):
-                    ax.contourf(g.geophys.grv_data, colorbar = colorbar,
-                    ax = axs[i- n_rows*(i/n_rows),i/n_rows], alpha = alpha, cmap = cmap,
-                    interpolation= 'nearest' ,ve = ve, geomod_coord= geomod_coord,
-                    contour = contour, plot_layer = levels)
+                    axs[i- n_rows*(i/n_rows),i/n_rows].imshow(g.geophys.grv_data,
+                    alpha = alpha, cmap = cmap,
+                    interpolation= 'nearest', origin = "lower")
 
                 plt.text(0.5, 1.1, "Gravity "+ self.model_name,
                 horizontalalignment='center',
@@ -798,7 +810,7 @@ class GeoPyMC_GeoMod_from_posterior(GeoPyMC_rep, GeoPyMC_sim):
         b = []
         i = 0
         for i, Stoch in enumerate(self._plot_traces):
-            if Stoch == "SM_Atley" or Stoch == "BIF_Atley":
+            if Stoch == "SM2_Atley" or Stoch == "BIF_Atley":
                 continue
             def logp(value):
                 return 0

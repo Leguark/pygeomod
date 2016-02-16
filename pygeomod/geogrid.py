@@ -149,7 +149,7 @@ class GeoGrid():
         if platform.system() == "Linux":
             lib = ctypes.CDLL('./libgeomod.so') #linux
         elif platform.system() == "Windows":
-            lib = ctypes.windll.LoadLibrary(os.path.dirname(os.path.abspath(__file__)) + os.path.sep +"libgeomodwin.dll")     #windows
+            lib = ctypes.windll.LoadLibrary(os.path.dirname(os.path.abspath(__file__)) + os.path.sep +"libgeomodwin_leak6.dll")     #windows
         else:
             print("Your operative system is not supported")
         lib.get_model_bounds.restype = ndpointer(dtype=ctypes.c_int, shape=(6,))
@@ -160,116 +160,7 @@ class GeoGrid():
         self.extent_z = self.zmax - self.zmin
 
 
-# functions to try to improve the performance. They sucks yet.
-    def update_from_geomodeller_project_OP(self, xml_filename):
-        """Update grid properties directly from Geomodeller project
-
-        **Arguments**:
-            - *xml_filename* = string: filename of Geomodeller XML file
-        """
-        filename_ctypes = ctypes.c_char_p(xml_filename)
-
-
-
-        #print filename_ctypes
-        # create cell position list with [x0, y0, z0, ... xn, yn, zn]
-        cell_position = []
-        ids = []
-        formations_raw = []
-        # check if cell centers are defined - if not, do so!
-
-        if platform.system() == "Linux":
-            lib = ctypes.CDLL('./libgeomod.so') #linux
-        elif platform.system() == "Windows":
-            lib = ctypes.windll.LoadLibrary(os.path.dirname(os.path.abspath(__file__)) + os.path.sep +"libgeomodwin.dll") #windows
-        else:
-            print("Your operative system is not supported")
-
-        lib.compute_irregular_grid.restype = ndpointer(dtype=ctypes.c_int, shape=(3,))
-        # This is the function wich needs GPU!!!
-
-        #lib.init_api(filename_ctypes)
-
-        # check if cell centers are defined - if
-
-
-        if not hasattr(self, 'cell_centers_x'):
-            self.determine_cell_centers()
-            for k in range(self.nz):
-                for j in range(self.ny):
-                    for i in range(self.nx):
-                        cell_position.append(self.cell_centers_x[i])
-                        cell_position.append(self.cell_centers_y[j])
-                        cell_position.append(self.cell_centers_z[k])
-                        print len(cell_position), cell_position
-                        coord_ctypes = (ctypes.c_double * 3)(*cell_position)
-                        formation2 = lib.compute_irregular_grid_op(coord_ctypes)
-                        #formations_raw.append(lib.compute_irregular_grid(coord_ctypes))
-                        print "e", formation2
-                        cell_position = []
-                        ids.append((i,j,k))
-                        print len(formations_raw)
-        # prepare variables for cpp function
-
-        # call cpp function
-                    #Detection of operative system:
-        # re-sort formations into array
-
-        for i in range(len(formations_raw)):
-            self.grid[ids[i][0],ids[i][1],ids[i][2]] = formations_raw[i]
-
-
-    def update_from_geomodeller_project_OP2(self,xml_filename):
-        """Update grid properties directly from Geomodeller project
-
-        **Arguments**:
-            - *xml_filename* = string: filename of Geomodeller XML file
-        """
-        filename_ctypes = ctypes.c_char_p(xml_filename)
-
-        if platform.system() == "Linux":
-            lib = ctypes.CDLL('./libgeomod.so') #linux
-        elif platform.system() == "Windows":
-            lib = ctypes.windll.LoadLibrary(os.path.dirname(os.path.abspath(__file__)) + os.path.sep +"libgeomodwin_test2.dll") #windows
-        else:
-            print("Your operative system is not supported")
-
-        #print filename_ctypes
-        # create cell position list with [x0, y0, z0, ... xn, yn, zn]
-        cell_position = []
-        ids = []
-        formations_sol = []
-        # check if cell centers are defined - if not, do so!
-        if not hasattr(self, 'cell_centers_x'):
-            self.determine_cell_centers()
-            for k in range(self.nz):
-                for j in range(self.ny):
-                    for i in range(self.nx):
-                        cell_position.append(self.cell_centers_x[i])
-                        cell_position.append(self.cell_centers_y[j])
-                        cell_position.append(self.cell_centers_z[k])
-
-
-                        coord_ctypes = (ctypes.c_double * len(cell_position))(*cell_position)
-                        coord_len = len(cell_position)
-
-                        lib.compute_irregular_grid.restype = ndpointer(dtype=ctypes.c_int, shape=(coord_len/3,))
-
-                        formations_raw = lib.compute_irregular_grid(filename_ctypes, coord_ctypes, coord_len)
-                        formations_sol.append(formations_raw)
-                    #    print formations_raw
-                        cell_position = []
-                        ids.append((i,j,k))
-
-        # prepare variables for cpp function
-
-        # call cpp function
-                    #Detection of operative system:
-
-        for i in range(len(formations_sol)):
-            self.grid[ids[i][0],ids[i][1],ids[i][2]] = formations_sol[i]
-
-
+# f
 
     def update_from_geomodeller_project(self, xml_filename):
         """Update grid properties directly from Geomodeller project
@@ -304,7 +195,7 @@ class GeoGrid():
         if platform.system() == "Linux":
             lib = ctypes.CDLL('./libgeomod.so') #linux
         elif platform.system() == "Windows":
-            lib = ctypes.windll.LoadLibrary(os.path.dirname(os.path.abspath(__file__)) + os.path.sep +"libgeomodwin_leak2.dll") #windows
+            lib = ctypes.windll.LoadLibrary(os.path.dirname(os.path.abspath(__file__)) + os.path.sep +"libgeomodwin_leak6.dll") #windows
         else:
             print("Your operative system is not supported")
         #print coord_len
