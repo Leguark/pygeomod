@@ -5,7 +5,7 @@ Created on 21/03/2014
 @author: Florian Wellmann (some parts originally developed by Erik Schaeffer)
 '''
 import numpy as np
-import pynoddy
+#import pynoddy
 import subprocess
 import os.path
 import platform
@@ -50,8 +50,8 @@ class GeoGrid():
     def __add__(self, G_other):
         """Combine grid with another GeoGrid if regions are overlapping"""
         # check overlap
-        print self.ymin, self.ymax
-        print G_other.ymin, G_other.ymax
+        print (self.ymin, self.ymax)
+        print (G_other.ymin, G_other.ymax)
         if (G_other.ymin < self.ymax and G_other.ymin > self.ymin):
             print("Grids overlapping in y-direction between %.0f and %.0f" %
                   (G_other.ymin, self.ymax))

@@ -8,7 +8,7 @@ Created on 02/12/2015
 
 import numpy as np
 # Geophysisc inversion
-import pynoddy
+#import pynoddy
 
 import subprocess
 import os.path
