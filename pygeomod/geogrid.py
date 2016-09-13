@@ -40,11 +40,11 @@ class GeoGrid():
             - *dimensions_filename* = string : file with model dimension (coordinates)
         """
 
-        if kwds.has_key('grid_filename'):
+        if 'grid_filename' in kwds:
             self.grid_filename = kwds['grid_filename']
-        if kwds.has_key('delxyz_filename'):
+        if 'delxyz_filename' in kwds:
             self.delxyz_filename = kwds['delxyz_filename']
-        if kwds.has_key('dimensions_filename'):
+        if 'dimensions_filename' in kwds:
             self.dimensions_filename = kwds['dimensions_filename']
 
     def __add__(self, G_other):
@@ -435,7 +435,7 @@ class GeoGrid():
         if i_all == 0:
             vals = grid.unit_ids
             for val in vals:
-                if not all_probs.has_key(val):
+                if not val in all_probs:
                     all_probs[val] = np.zeros_like(grid.grid, dtype = "float")
                     all_probs_filtered[val] = np.zeros_like(grid.grid, dtype = "float")
 
@@ -502,7 +502,7 @@ class GeoGrid():
         **Optional keywords**:
             - *dim* = (xmin, xmax, ymin, ymax, zmin, zmax) : set dimensions explicitly
         """
-        if kwds.has_key("dim"):
+        if "dim" in kwds:
             (self.xmin, self.xmax, self.ymin, self.ymax, self.zmin, self.zmax) = kwds['dim']
         else:
             self.xmin, self.ymin, self.zmin = (0., 0., 0.)
@@ -587,7 +587,7 @@ class GeoGrid():
         linewidth = kwds.get("linewidth", 1)
         levels = kwds.get("plot_layer", None)
 
-        if not kwds.has_key('ax'):
+        if not "ax" in kwds:
             colorbar = kwds.get('colorbar', True)
             # create new axis for plot
             fig = plt.figure(figsize=figsize)
@@ -733,11 +733,11 @@ class GeoGrid():
             cbar1.set_label("Geology ID")
         #         cax.xaxis.set_major_formatter(FormatStrFormatter("%d"))
 
-        if kwds.has_key("ax"):
+        if "ax" in kwds:
             # return image and do not show
             return im
 
-        if kwds.has_key('savefig') and kwds['savefig']:
+        if 'savefig' in kwds:
             # save to file
             filename = kwds.get("fig_filename", "grid_section_direction_%s_pos_%d.png" %
                                 (direction, cell_pos))
