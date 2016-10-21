@@ -149,7 +149,7 @@ class GeoGrid():
         if platform.system() == "Linux":
             lib = ctypes.CDLL('./libgeomod.so') #linux
         elif platform.system() == "Windows":
-            lib = ctypes.windll.LoadLibrary(os.path.dirname(os.path.abspath(__file__)) + os.path.sep +"libgeomodwin_leak6.dll")     #windows
+            lib = ctypes.windll.LoadLibrary(os.path.dirname(os.path.abspath(__file__)) + os.path.sep + "libgeomodwin_leak6.dll")     #windows
         else:
             print("Your operative system is not supported")
         lib.get_model_bounds.restype = ndpointer(dtype=ctypes.c_int, shape=(6,))
